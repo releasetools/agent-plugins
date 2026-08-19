@@ -1,0 +1,41 @@
+{
+  "name": "mutex",
+  "version": "0.1.0",
+  "description": "Guard a shared resource with a distributed lock, using the mutex CLI",
+  "author": {
+    "name": "releasetools",
+    "url": "https://github.com/releasetools"
+  },
+  "homepage": "https://github.com/releasetools/mutex#readme",
+  "repository": "https://github.com/releasetools/mutex",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mutex",
+    "lock",
+    "distributed-lock",
+    "concurrency",
+    "postgres",
+    "ci",
+    "deployment"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "interface": {
+    "displayName": "mutex",
+    "shortDescription": "Distributed locks for guarded operations",
+    "longDescription": "Take a PostgreSQL-backed advisory lock around work that only one caller may do at a time - a deploy, a migration, a staging environment - hand it back when the work is done, and know before the lease runs out. The same table backs the mutex CLI and the releasetools/mutex GitHub Action, so a lock taken here also blocks CI.",
+    "developerName": "releasetools",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Guard an operation with a distributed lock",
+      "Report who holds a lock and when it expires",
+      "Extend or release a lock that is already held"
+    ],
+    "websiteURL": "https://github.com/releasetools/mutex#readme",
+    "defaultPrompt": [
+      "Take a mutex lock on staging while I run this migration.",
+      "Who is holding the deploy lock right now?",
+      "Release the lock we took on staging."
+    ]
+  }
+}

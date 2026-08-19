@@ -1,0 +1,196 @@
+name: Validate
+
+# Both catalogs in this repository are generated, and each of the two clients
+# reads only its own. So the check that matters is the one neither vendor can
+# make: that the two describe the same inventory, that every entry matches the
+# plugin behind it, and that both clients can actually install what is listed.
+#
+# Everything here is read-only. Publication happens from the plugin's own
+# repository, through the release GitHub App.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Deny by default; each job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned, so what validates a marketplace is the client this repository was
+  # tested against rather than whatever `latest` happens to be that morning.
+  # Bump through a reviewed change.
+  # renovate: datasource=npm depName=@anthropic-ai/claude-code
+  CLAUDE_CODE_VERSION: "2.1.235"
+  # renovate: datasource=npm depName=@openai/codex
+  CODEX_VERSION: "0.147.0"
+
+jobs:
+  catalogs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      plugins: ${{ steps.inventory.outputs.plugins }}
+      any: ${{ steps.inventory.outputs.any }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      # Every JSON file, not only the catalogs: a plugin manifest that does not
+      # parse installs as a plugin that does not exist.
+      - name: ✅ Parse every JSON file
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' file; do
+            node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$file"
+            count=$((count + 1))
+          done < <(find . -path ./.git -prune -o -name '*.json' -print0)
+          echo "Parsed ${count} JSON files"
+
+      - name: 🧪 Test the marketplace tooling
+        run: node --test tests/*.test.mjs
+
+      - name: ✅ Check the cross-client invariants
+        run: node scripts/validate-marketplaces.mjs
+
+      - name: 📦 Install the pinned Claude Code CLI
+        run: npm install --global "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+
+      # --strict from the first publication onwards. An empty catalog is a
+      # warning, which is correct: a marketplace with nothing in it is a
+      # marketplace nobody can install from.
+      - name: ✅ Validate the marketplace with Claude Code
+        run: claude plugin validate --strict .
+
+      - name: 📋 List what is published
+        id: inventory
+        run: |
+          set -euo pipefail
+          plugins="$(node -e '
+            const catalog = JSON.parse(require("node:fs").readFileSync(".claude-plugin/marketplace.json", "utf8"));
+            process.stdout.write(JSON.stringify(catalog.plugins.map((entry) => entry.name)));
+          ')"
+          echo "plugins=${plugins}" >> "$GITHUB_OUTPUT"
+          [ "$plugins" = "[]" ] && echo "any=false" >> "$GITHUB_OUTPUT" || echo "any=true" >> "$GITHUB_OUTPUT"
+          echo "Published: ${plugins}"
+
+  # Adding the checkout as a marketplace and installing out of it is the only
+  # check that covers the whole path a user takes. The catalog can be valid, the
+  # manifest can be valid, and the plugin can still fail to install because a
+  # source resolves somewhere that is not there.
+  install:
+    needs: catalogs
+    if: needs.catalogs.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJson(needs.catalogs.outputs.plugins) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: 📦 Install the pinned client CLIs
+        run: |
+          npm install --global \
+            "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
+            "@openai/codex@${CODEX_VERSION}"
+
+      - name: ✅ Install ${{ matrix.plugin }} with Claude Code
+        env:
+          PLUGIN: ${{ matrix.plugin }}
+          # A throwaway configuration, so nothing carries over between plugins.
+          CLAUDE_CONFIG_DIR: ${{ runner.temp }}/claude-${{ matrix.plugin }}
+        run: |
+          set -euo pipefail
+
+          expected="$(node -p "require('./plugins/${PLUGIN}/.claude-plugin/plugin.json').version")"
+          claude plugin marketplace add "$PWD"
+          claude plugin install "${PLUGIN}@releasetools"
+
+          installed="$(claude plugin list --json | node -e '
+            const rows = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+            const found = rows.find((row) => row.id === `${process.env.PLUGIN}@releasetools`);
+            process.stdout.write(found ? found.version : "");
+          ')"
+          if [ "$installed" != "$expected" ]; then
+            echo "::error::Claude Code installed ${PLUGIN} '${installed}', but the plugin is ${expected}"
+            exit 1
+          fi
+          echo "Claude Code installed ${PLUGIN} ${installed}"
+
+      - name: ✅ Install ${{ matrix.plugin }} with Codex
+        env:
+          PLUGIN: ${{ matrix.plugin }}
+          CODEX_HOME: ${{ runner.temp }}/codex-${{ matrix.plugin }}
+        run: |
+          set -euo pipefail
+
+          expected="$(node -p "require('./plugins/${PLUGIN}/.codex-plugin/plugin.json').version")"
+          mkdir -p "$CODEX_HOME"
+          codex plugin marketplace add "$PWD"
+          codex plugin add "${PLUGIN}@releasetools"
+
+          installed="$(codex plugin list --json | node -e '
+            const { installed } = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+            const found = installed.find((row) => row.name === process.env.PLUGIN);
+            process.stdout.write(found ? found.version : "");
+          ')"
+          if [ "$installed" != "$expected" ]; then
+            echo "::error::Codex installed ${PLUGIN} '${installed}', but the plugin is ${expected}"
+            exit 1
+          fi
+          echo "Codex installed ${PLUGIN} ${installed}"
+
+  # One check name that stays true as the catalog grows.
+  #
+  # `install` is a matrix, so its checks are named after the plugins in it -
+  # `install (mutex)`. Requiring those by name means a plugin added later is
+  # covered by nothing that is required, and a plugin withdrawn leaves a
+  # required check that never reports again, which blocks every pull request
+  # until somebody edits a repository setting. This is the one to require.
+  validated:
+    if: always()
+    needs: [catalogs, install]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: ✅ Every validation job passed
+        env:
+          CATALOGS: ${{ needs.catalogs.result }}
+          INSTALL: ${{ needs.install.result }}
+        run: |
+          set -euo pipefail
+
+          echo "catalogs: ${CATALOGS}, install: ${INSTALL}"
+
+          # `install` is skipped, legitimately, while no plugin is published.
+          for result in "$CATALOGS" "$INSTALL"; do
+            case "$result" in
+              success | skipped) ;;
+              *)
+                echo "::error::A validation job reported ${result}"
+                exit 1
+                ;;
+            esac
+          done
