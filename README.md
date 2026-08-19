@@ -28,9 +28,9 @@ codex plugin add mutex@releasetools
 | ------- | -------------------------------------------------------------------- |
 | `mutex` | Guard a shared resource with a distributed lock, using the mutex CLI |
 
-Each plugin's own repository owns its source and decides its version;
-`plugins/<name>/` here is a copy written by that repository's release and is
-never edited by hand. See [AGENTS.md](./AGENTS.md) for how that works.
+The plugins live here: `plugins/<name>/` is the source, not a copy of one, and
+a merge to `main` is the release. See [AGENTS.md](./AGENTS.md) for how to change
+one.
 
 ### mutex needs the mutex CLI
 
