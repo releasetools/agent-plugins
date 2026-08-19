@@ -1,0 +1,8 @@
+{
+  "name": "releasetools",
+  "owner": {
+    "name": "releasetools"
+  },
+  "description": "Official releasetools plugins for coding agents",
+  "plugins": []
+}

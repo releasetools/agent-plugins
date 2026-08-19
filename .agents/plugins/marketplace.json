@@ -1,0 +1,7 @@
+{
+  "name": "releasetools",
+  "interface": {
+    "displayName": "releasetools"
+  },
+  "plugins": []
+}
