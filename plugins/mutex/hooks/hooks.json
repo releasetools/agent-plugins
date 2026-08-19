@@ -1,0 +1,16 @@
+{
+  "description": "Warns before a lock taken through the mutex skill runs out",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs\" nudge",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

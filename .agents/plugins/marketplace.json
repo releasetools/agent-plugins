@@ -3,5 +3,18 @@
   "interface": {
     "displayName": "releasetools"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "mutex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/mutex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
 }

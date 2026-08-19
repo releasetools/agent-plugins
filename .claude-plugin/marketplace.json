@@ -4,5 +4,28 @@
     "name": "releasetools"
   },
   "description": "Official releasetools plugins for coding agents",
-  "plugins": []
+  "plugins": [
+    {
+      "name": "mutex",
+      "source": "./plugins/mutex",
+      "description": "Guard a shared resource with a distributed lock, using the mutex CLI",
+      "version": "0.1.0",
+      "author": {
+        "name": "releasetools",
+        "url": "https://github.com/releasetools"
+      },
+      "homepage": "https://github.com/releasetools/mutex#readme",
+      "repository": "https://github.com/releasetools/mutex",
+      "license": "Apache-2.0",
+      "keywords": [
+        "mutex",
+        "lock",
+        "distributed-lock",
+        "concurrency",
+        "postgres",
+        "ci",
+        "deployment"
+      ]
+    }
+  ]
 }
