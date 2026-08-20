@@ -1,0 +1,33 @@
+{
+  "name": "@releasetools/agent-plugins",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The releasetools plugin marketplace for Claude Code and Codex",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/releasetools/agent-plugins.git"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "lint": "prettier --ignore-unknown --write '**/*.{ts,js,mjs,json,md,yml,yaml}'",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "npm run typecheck && NODE_OPTIONS=--experimental-vm-modules jest",
+    "validate": "node scripts/validate-plugin.mjs && node scripts/validate-marketplaces.mjs",
+    "sync": "node scripts/sync-catalogs.mjs",
+    "install-skills": "node scripts/install-agent-skills.mjs",
+    "check": "npm run lint && npm test && npm run validate"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.15.0",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "^7.0.0"
+  }
+}

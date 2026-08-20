@@ -20,9 +20,9 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * Throwaway marketplaces and assembled plugins.
+ * Throwaway marketplaces.
  *
- * Every test that matters here is about a second plugin: whether publishing one
+ * Every check worth having here is about a second plugin: whether editing one
  * disturbs another's entry, its position, or its files. So the fixtures make it
  * cheap to have two.
  */
@@ -63,13 +63,13 @@ export function marketplace(overrides = {}) {
   return root;
 }
 
-/** A plugin as `npm run plugin:package` leaves it in its own repository. */
-export function assembled(name, overrides = {}) {
-  const root = overrides.root ?? temporary(`plugin-${name}`);
+/** A plugin written into `plugins/<name>/`, the way somebody would author one. */
+export function plugin(root, name, overrides = {}) {
+  const at = `plugins/${name}`;
   const version = overrides.version ?? "1.0.0";
   const description = overrides.description ?? `The ${name} plugin`;
 
-  writeJson(root, ".claude-plugin/plugin.json", {
+  writeJson(root, `${at}/.claude-plugin/plugin.json`, {
     name,
     version,
     description,
@@ -80,7 +80,7 @@ export function assembled(name, overrides = {}) {
     keywords: [name],
     ...(overrides.claude ?? {}),
   });
-  writeJson(root, ".codex-plugin/plugin.json", {
+  writeJson(root, `${at}/.codex-plugin/plugin.json`, {
     name,
     version,
     description,
@@ -93,23 +93,29 @@ export function assembled(name, overrides = {}) {
       shortDescription: description,
       longDescription: description,
       category: "Developer Tools",
+      ...(overrides.face ?? {}),
     },
     ...(overrides.codex ?? {}),
   });
-  write(root, "LICENSE", "Apache-2.0\n");
-  write(root, "README.md", `# ${name}\n`);
+  write(root, `${at}/LICENSE`, "Apache-2.0\n");
+  write(root, `${at}/README.md`, `# ${name}\n`);
   write(
     root,
-    `commands/${name}.md`,
+    `${at}/commands/${name}.md`,
     `---\nname: ${name}\ndescription: ${description}\n---\n`,
   );
   write(
     root,
-    `skills/${name}/SKILL.md`,
+    `${at}/commands/help.md`,
+    `---\nname: help\ndescription: What this does\n---\n\n- /${name}:${name} - do the thing\n`,
+  );
+  write(
+    root,
+    `${at}/skills/${name}/SKILL.md`,
     `---\nname: ${name}\ndescription: ${description}\n---\n`,
   );
   for (const [relative, contents] of Object.entries(overrides.files ?? {})) {
-    write(root, relative, contents);
+    write(root, `${at}/${relative}`, contents);
   }
-  return root;
+  return path.join(root, at);
 }
