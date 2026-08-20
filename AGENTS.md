@@ -98,6 +98,23 @@ from here when that release is built, so a global install can still seed Hermes,
 Gemini and Antigravity - the agents that read no manifest and have no checkout.
 `install-agent-skills.mjs` is what copies it, and it runs from either home.
 
+## The website
+
+[releasetools/website](https://github.com/releasetools/website) documents the
+releasetools tools, and **the plugin is not on it**. `docs/mutex.md` describes
+the CLI and the Action, and says nothing about this marketplace, the skill or
+the slash commands.
+
+So the first release that wants it there has a page to write: add
+`docs/agent-plugins.md`, and list it under `Tools` in `sidebars.ts` next to
+`mutex` and `cli`. `plugins/<name>/README.md` is the closest thing to a source -
+it is what an agent host shows next to an install button.
+
+After that, **a release that changes what a user sees needs a pull request there
+too**: the install commands, what is in the slash menu, what the skill will and
+will not do. It is a separate repository with its own deploy, so nothing here
+updates it and nothing notices when it drifts.
+
 ## Before committing
 
 ```shell
