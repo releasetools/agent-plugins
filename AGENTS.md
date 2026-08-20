@@ -67,10 +67,31 @@ is a major.
 ## The plugin and the CLI it drives
 
 `plugins/mutex/skills/mutex/agent-lock.mjs` wraps the `mutex` CLI. It knows that
-CLI's exit codes, subcommands and flags, so the two move together even though
-their versions do not: a renamed flag upstream is a broken plugin here. The
-tests cover the helper against a stub, which is not the same as covering it
-against the real thing - so treat a mutex release as a reason to check.
+CLI's subcommands, flags, exit codes and the shape of its `--json`, so the two
+move together even though their versions do not. The tests cover the helper
+against a shell stub that answers however the helper expects, which is not the
+same as covering it against the real thing.
+
+**Before opening a pull request that has the helper use something new from the
+CLI - a subcommand, a flag, an exit code, a field in `--json` - check that a
+released mutex has it.**
+
+```shell
+npm view @releasetools/mutex version
+npx --yes @releasetools/mutex@latest list --help
+```
+
+If it does not, the change belongs in
+[releasetools/mutex](https://github.com/releasetools/mutex) first, and the two
+pull requests have to be **merged and released together**. The halves reach a
+user from different places - the plugin from this marketplace, the CLI from npm
+
+- so a plugin that needs an unreleased flag is a command that fails for everyone
+  until the CLI ships.
+
+That has already happened: `/mutex:status` began calling `mutex list --owner`
+while the newest published CLI was 1.3.1, which answers
+`'list' does not take --owner`. Both sides are landing together this time.
 
 The `mutex` npm package carries a copy of `skills/` and `commands/`, fetched
 from here when that release is built, so a global install can still seed Hermes,
