@@ -25,7 +25,7 @@ import * as agentLock from "../plugins/mutex/skills/mutex/agent-lock.mjs";
 const { deriveName, main, parseRemoteUrl } = agentLock;
 
 /**
- * The `name` subcommand: one resource, one id, on every machine.
+ * The `callsign` subcommand: one resource, one id, on every machine.
  *
  * An advisory lock only excludes callers who ask for the same id, so two
  * agents that derive different ids for the same PR exclude nobody, and the
@@ -96,7 +96,7 @@ function runName(
       : null;
   const out = capture();
   const err = capture();
-  const code = main(["name", ...args], {
+  const code = main(["callsign", ...args], {
     gitExecutable: options.git ?? git?.executable,
     host: options.host,
     stdout: out.stream,

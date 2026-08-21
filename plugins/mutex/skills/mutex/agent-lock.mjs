@@ -497,7 +497,7 @@ function forgeNumber(kind, value) {
 }
 
 /**
- * The lock id for a resource, as `name <kind> [args...]` computes it.
+ * The lock id for a resource, as `callsign <kind> [args...]` computes it.
  *
  * Returns `{id, kind, source}`, where source says what was read - "origin
  * remote", "argument", "hostname". Throws the first rule the input broke;
@@ -1638,7 +1638,7 @@ export function commandName(positionals, options = {}) {
   try {
     named = deriveName(kind, args, options);
   } catch (error) {
-    write(stderr, `agent-lock: name: ${error.message}`);
+    write(stderr, `agent-lock: callsign: ${error.message}`);
     return EXIT_USAGE;
   }
 
@@ -1748,12 +1748,12 @@ Usage: node ${invocation} <command> [<id>] [options]
 Commands:
   preflight        Report whether mutex can reach the lock table here
                    (--grant also adds the permission rules it needs)
-  name <kind> ...  Derive a resource's lock id and print it alone, so every
+  callsign <kind>  Derive a resource's lock id and print it alone, so every
                    agent computes the same one: issue, pr, mr, branch,
                    release, admin and wiki read the origin remote; env, db,
                    pkg, dns, tf, host, role, cron, announce, secret,
-                   notion page|db and doc need no repository; 'name check
-                   <id>' validates an id you already have
+                   notion page|db and doc need no repository; 'callsign
+                   check <id>' validates an id you already have
   lock <id>        Take a lock, and record what was taken
   renew <id>       Extend a recorded lock, keeping its owner
   unlock <id>      Hand a recorded lock back
@@ -1771,17 +1771,17 @@ Options:
       --try                   One attempt, no waiting
   -o, --owner <name>          Override the recorded owner
   -p, --profile <name>        Use one mutex profile for this command
-      --repo <owner>/<name>   name: this repository instead of the origin
-                              remote (<host>/<path> when not github.com)
-      --remote <name>         name: read this git remote instead of origin
+      --repo <owner>/<name>   callsign: this repository instead of the
+                              origin remote (<host>/<path> when not github.com)
+      --remote <name>         callsign: read this git remote instead of origin
       --all                   status: the whole table, not only your locks
       --json                  Machine-readable output
       --no-color              No ANSI colour in the status line
   -h, --help                  Show this
 
 Every lock operation goes through the mutex CLI, which reads its connection
-string from $MUTEX_DATABASE_URL and from nowhere else; 'name' derives ids from
-strings alone and opens no connection at all. This script never sees the
+string from $MUTEX_DATABASE_URL and from nowhere else; 'callsign' derives ids
+from strings alone and opens no connection at all. This script never sees the
 secret, never prints it, and never passes it as an argument.
 `;
 }
@@ -1861,7 +1861,7 @@ export function main(argv, options = {}) {
   switch (command) {
     case "preflight":
       return commandPreflight(shared);
-    case "name":
+    case "callsign":
       return commandName(positionals.slice(1), shared);
     case "lock":
       return commandLock(id, shared);

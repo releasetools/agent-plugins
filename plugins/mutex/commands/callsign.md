@@ -1,5 +1,5 @@
 ---
-name: name
+name: callsign
 description: Derive the lock id for a resource, so every agent computes the same one
 argument-hint: "<kind> [args...]"
 allowed-tools:
@@ -10,7 +10,7 @@ allowed-tools:
 Run this once, passing `$ARGUMENTS` through as the kind and its arguments:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs" name <kind> [args...]
+node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs" callsign <kind> [args...]
 ```
 
 `issue`, `pr`, `mr`, `branch`, `release`, `admin` and `wiki` read the origin
