@@ -106,8 +106,11 @@ user from different places - the plugin from this marketplace, the CLI from npm
   until the CLI ships.
 
 That has already happened: `/mutex:status` began calling `mutex list --owner`
-while the newest published CLI was 1.3.1, which answers
-`'list' does not take --owner`. Both sides are landing together this time.
+while the newest published CLI was 1.3.1, which answered
+`'list' does not take --owner`. The two shipped together in the end - the plugin
+at 0.1.0 and the CLI at 1.4.0 - so nobody ran into it. The contract suite covers
+that flag now, but it would have found this after the fact; the rule above is
+what stops it being written in the first place.
 
 The `mutex` npm package carries a copy of `skills/` and `commands/`, fetched
 from here when that release is built, so a global install can still seed Hermes,
