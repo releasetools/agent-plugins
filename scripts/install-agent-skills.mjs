@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 /**
- * Puts the skill where each agent looks for it.
+ * Puts the skills where each agent looks for them.
  *
  * Claude Code and Codex read `skills/` through the manifests in
  * `.claude-plugin/` and `.codex-plugin/`, so they install the plugin rather
@@ -34,6 +34,14 @@ import { parseArgs } from "node:util";
  * that branch" into "my agent lost a skill", and these directories outlive the
  * checkouts they came from.
  */
+
+/**
+ * The skill the slash commands invoke their helper from. The commands are the
+ * plugin's rather than any one skill's, so they render into this namespace and
+ * only when this skill is being installed - a command naming a helper that was
+ * not copied would fail at the moment it runs.
+ */
+const PLUGIN_SKILL = "mutex";
 
 export const TARGETS = [
   {
@@ -122,23 +130,51 @@ export function renderGeminiCommand(markdown, options = {}) {
 }
 
 /**
+ * The skills a checkout ships: the directories under `skills/`.
+ *
+ * Discovered rather than listed, for the same reason the manifests point at
+ * the whole directory: an agent that reads `skills/` through a manifest gets
+ * every skill in it, and the agents that get copies should not get fewer.
+ */
+export function shippedSkills(root) {
+  let entries;
+  try {
+    entries = fs.readdirSync(path.join(root, "skills"), {
+      withFileTypes: true,
+    });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+/**
  * Every file this agent should end up with, keyed by its path under the agent's
  * home. Copied bytes and rendered commands go through the same map, so
  * `--check` reports staleness for both without knowing the difference.
  */
-export function plannedFiles(root, skill, target, agentHome = "") {
+export function plannedFiles(root, skills, target, agentHome = "") {
   const planned = new Map();
 
-  const source = path.join(root, "skills", skill);
-  for (const relative of filesUnder(source)) {
-    planned.set(
-      path.join(target.skills, skill, relative),
-      fs.readFileSync(path.join(source, relative)),
-    );
+  for (const skill of skills) {
+    const source = path.join(root, "skills", skill);
+    for (const relative of filesUnder(source)) {
+      planned.set(
+        path.join(target.skills, skill, relative),
+        fs.readFileSync(path.join(source, relative)),
+      );
+    }
   }
 
   const commands = path.join(root, "commands");
-  if (target.commands && fs.existsSync(commands)) {
+  if (
+    target.commands &&
+    skills.includes(PLUGIN_SKILL) &&
+    fs.existsSync(commands)
+  ) {
     for (const entry of fs.readdirSync(commands)) {
       if (!entry.endsWith(".md")) {
         continue;
@@ -146,13 +182,16 @@ export function plannedFiles(root, skill, target, agentHome = "") {
       planned.set(
         path.join(
           target.commands,
-          skill,
+          PLUGIN_SKILL,
           `${path.basename(entry, ".md")}.toml`,
         ),
         Buffer.from(
           renderGeminiCommand(
             fs.readFileSync(path.join(commands, entry), "utf8"),
-            { skill, skillDir: path.join(agentHome, target.skills, skill) },
+            {
+              skill: PLUGIN_SKILL,
+              skillDir: path.join(agentHome, target.skills, PLUGIN_SKILL),
+            },
           ),
         ),
       );
@@ -183,19 +222,19 @@ export const PACKAGE_ROOT = path.resolve(
  * read no manifest and have no checkout. One script, because the alternative is
  * two that drift.
  */
-export function defaultRoot(here = PACKAGE_ROOT, skill = "mutex") {
-  const plugin = path.join(here, "plugins", skill);
-  if (fs.existsSync(path.join(plugin, "skills", skill))) {
-    return plugin;
+export function defaultRoot(here = PACKAGE_ROOT, plugin = PLUGIN_SKILL) {
+  const inTree = path.join(here, "plugins", plugin);
+  if (fs.existsSync(path.join(inTree, "skills"))) {
+    return inTree;
   }
   return here;
 }
 
 export function installAgentSkills(options = {}) {
+  const root = options.root ?? defaultRoot(PACKAGE_ROOT);
   const home = options.home ?? os.homedir();
-  const skill = options.skill ?? "mutex";
-  const root = options.root ?? defaultRoot(PACKAGE_ROOT, skill);
-  const source = path.join(root, "skills", skill);
+  const skills = options.skills?.length ? options.skills : shippedSkills(root);
+  const source = path.join(root, "skills");
   const requested = options.targets?.length ? options.targets : DEFAULT_TARGETS;
   const write = !options.check && !options.dryRun;
 
@@ -207,8 +246,13 @@ export function installAgentSkills(options = {}) {
       `unknown agent(s): ${unknown.join(", ")}. Known: ${TARGETS.map(({ agent }) => agent).join(", ")}`,
     );
   }
-  if (!fs.existsSync(source)) {
-    throw new Error(`no skill to install at ${source}`);
+  if (skills.length === 0) {
+    throw new Error(`no skills to install under ${source}`);
+  }
+  for (const skill of skills) {
+    if (!fs.existsSync(path.join(source, skill))) {
+      throw new Error(`no skill to install at ${path.join(source, skill)}`);
+    }
   }
 
   const results = [];
@@ -217,7 +261,7 @@ export function installAgentSkills(options = {}) {
     requested.includes(candidate.agent),
   )) {
     const agentHome = path.join(home, target.home);
-    const destination = path.join(agentHome, target.skills, skill);
+    const destination = path.join(agentHome, target.skills);
 
     if (!fs.existsSync(agentHome)) {
       // Not installed here. Creating the directory would leave a skill for an
@@ -230,7 +274,7 @@ export function installAgentSkills(options = {}) {
       continue;
     }
 
-    const planned = plannedFiles(root, skill, target, agentHome);
+    const planned = plannedFiles(root, skills, target, agentHome);
     const changed = [...planned]
       .filter(([relative, contents]) => {
         try {
@@ -243,7 +287,9 @@ export function installAgentSkills(options = {}) {
       })
       .map(([relative]) => relative);
 
-    const status = !fs.existsSync(destination)
+    const status = skills.some(
+      (skill) => !fs.existsSync(path.join(destination, skill)),
+    )
       ? "missing"
       : changed.length > 0
         ? "stale"
@@ -260,8 +306,10 @@ export function installAgentSkills(options = {}) {
     // Files an earlier layout left behind. Reported rather than deleted, since
     // this writes into directories it does not own.
     const roots = [
-      path.join(target.skills, skill),
-      ...(target.commands ? [path.join(target.commands, skill)] : []),
+      ...skills.map((skill) => path.join(target.skills, skill)),
+      ...(target.commands && skills.includes(PLUGIN_SKILL)
+        ? [path.join(target.commands, PLUGIN_SKILL)]
+        : []),
     ];
     const extra = roots
       .filter((relative) => fs.existsSync(path.join(agentHome, relative)))
@@ -281,7 +329,7 @@ export function installAgentSkills(options = {}) {
     });
   }
 
-  return { source, skill, results };
+  return { source, skills, results };
 }
 
 // Run directly, rather than imported by a test.
@@ -292,7 +340,7 @@ if (
   const { values } = parseArgs({
     options: {
       target: { type: "string", multiple: true, short: "t" },
-      skill: { type: "string" },
+      skill: { type: "string", multiple: true },
       check: { type: "boolean" },
       "dry-run": { type: "boolean" },
       help: { type: "boolean", short: "h" },
@@ -301,12 +349,13 @@ if (
 
   if (values.help) {
     process.stdout.write(
-      `install-agent-skills - copy skills/<name> into each agent's skills directory\n\n` +
+      `install-agent-skills - copy skills/ into each agent's skills directory\n\n` +
         `Usage: node scripts/install-agent-skills.mjs [options]\n\n` +
         `Options:\n` +
         `  -t, --target <agent>  Repeatable. ${TARGETS.map(({ agent }) => agent).join(", ")}\n` +
         `                        (default: ${DEFAULT_TARGETS.join(", ")})\n` +
-        `      --skill <name>    Which skill to install (default: mutex)\n` +
+        `      --skill <name>    Repeatable. Which skills to install\n` +
+        `                        (default: every directory under skills/)\n` +
         `      --check           Report what is missing or stale, and change nothing\n` +
         `      --dry-run         Report what would be written, and change nothing\n` +
         `  -h, --help            Show this\n\n` +
@@ -317,15 +366,16 @@ if (
   }
 
   try {
-    const targets = (values.target ?? []).flatMap((value) =>
-      value
-        .split(",")
-        .map((name) => name.trim())
-        .filter(Boolean),
-    );
+    const split = (given) =>
+      (given ?? []).flatMap((value) =>
+        value
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean),
+      );
     const { source, results } = installAgentSkills({
-      targets,
-      skill: values.skill,
+      targets: split(values.target),
+      skills: split(values.skill),
       check: values.check,
       dryRun: values["dry-run"],
     });

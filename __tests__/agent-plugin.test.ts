@@ -25,7 +25,12 @@ import * as packaging from "../scripts/validate-plugin.mjs";
 import * as installer from "../scripts/install-agent-skills.mjs";
 
 const { parseStrictJson, validatePlugin } = packaging;
-const { DEFAULT_TARGETS, installAgentSkills, renderGeminiCommand } = installer;
+const {
+  DEFAULT_TARGETS,
+  installAgentSkills,
+  renderGeminiCommand,
+  shippedSkills,
+} = installer;
 
 /**
  * The plugin is a directory four different agents read, and none of them says
@@ -123,6 +128,16 @@ describe("the plugin this repository publishes", () => {
     for (const product of [".claude-plugin", ".codex-plugin"]) {
       expect(fs.existsSync(path.join(PLUGIN, product, "skills"))).toBe(false);
     }
+  });
+
+  /**
+   * The two skills answer different questions: naming decides which lock an
+   * operation takes and what it is called, mutex decides everything around a
+   * lock being taken. An unexpected third is a directory the installer would
+   * start copying to every agent, so it has to be named here first.
+   */
+  it("ships the mutex and naming skills, and nothing else", () => {
+    expect(shippedSkills(PLUGIN)).toEqual(["mutex", "naming"]);
   });
 
   it("gives the agents a slash menu, not just a skill", () => {
@@ -384,7 +399,7 @@ describe("installAgentSkills", () => {
     expect(DEFAULT_TARGETS).toEqual(["hermes", "gemini"]);
   });
 
-  it("copies the skill into each agent that is installed", () => {
+  it("copies every skill into each agent that is installed", () => {
     const root = home([".hermes", ".gemini"]);
     const { results } = installAgentSkills({ root: PLUGIN, home: root });
 
@@ -392,12 +407,32 @@ describe("installAgentSkills", () => {
       "written",
       "written",
     ]);
+    for (const skill of ["mutex", "naming"]) {
+      expect(
+        fs.existsSync(
+          path.join(root, `.hermes/skills/devops/${skill}/SKILL.md`),
+        ),
+      ).toBe(true);
+      expect(
+        fs.existsSync(path.join(root, `.gemini/skills/${skill}/SKILL.md`)),
+      ).toBe(true);
+    }
+  });
+
+  /**
+   * The commands invoke the helper inside the mutex skill, so installing a
+   * subset that leaves that skill out must leave them out too - a slash menu
+   * naming a file that was never copied fails at the moment it is used.
+   */
+  it("installs a named subset, without commands that need what it omits", () => {
+    const root = home([".gemini"]);
+    installAgentSkills({ root: PLUGIN, home: root, skills: ["naming"] });
+
     expect(
-      fs.existsSync(path.join(root, ".hermes/skills/devops/mutex/SKILL.md")),
+      fs.existsSync(path.join(root, ".gemini/skills/naming/SKILL.md")),
     ).toBe(true);
-    expect(
-      fs.existsSync(path.join(root, ".gemini/skills/mutex/SKILL.md")),
-    ).toBe(true);
+    expect(fs.existsSync(path.join(root, ".gemini/skills/mutex"))).toBe(false);
+    expect(fs.existsSync(path.join(root, ".gemini/commands"))).toBe(false);
   });
 
   it("does not create a home for an agent that is not installed", () => {

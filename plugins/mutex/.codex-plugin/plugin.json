@@ -1,6 +1,6 @@
 {
   "name": "mutex",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Guard a shared resource with a distributed lock, using the mutex CLI",
   "author": {
     "name": "releasetools",
