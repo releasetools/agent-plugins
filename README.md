@@ -39,7 +39,7 @@ connection string. The CLI is a separate installation, and
 `MUTEX_DATABASE_URL` is yours to set:
 
 ```shell
-mise use --global "npm:@releasetools/mutex@latest"
+mise use --global "npm:@releasetools/mutex@1"
 mutex version
 ```
 
