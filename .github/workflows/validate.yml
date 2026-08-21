@@ -13,6 +13,9 @@ on:
   # schedule, so the seam can break with nothing changing here.
   schedule:
     - cron: "17 6 * * 1"
+  # For re-checking against a mutex that was published since the last run,
+  # without waiting for Monday or inventing a commit.
+  workflow_dispatch:
 
 # Deny by default; each job grants only what it needs.
 permissions: {}
