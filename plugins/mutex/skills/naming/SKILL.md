@@ -87,7 +87,7 @@ every agent learns it at once.
 
 ## Getting the id
 
-Run `/mutex:name` - `name pr 98`, `name env staging`, `name check <id>` -
-and use exactly what it prints. Never compose an id by hand: the helper is
+Run `/mutex:callsign` - `callsign pr 98`, `callsign env staging`,
+`callsign check <id>` - and use exactly what it prints. Never compose an id by hand: the helper is
 the naming rule, and an id typed from memory is how two agents stop
 excluding each other.

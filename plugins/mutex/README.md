@@ -61,7 +61,7 @@ to somebody else while the work is still going on.
 
 Two skills ride along: `mutex`, the judgment around a lock being taken, and
 `naming`, which decides which lock an operation takes and what it is called.
-`/mutex:name` derives the id from the resource, so every agent computes the
+`/mutex:callsign` derives the id from the resource, so every agent computes the
 same one.
 
 ## What it will not do
