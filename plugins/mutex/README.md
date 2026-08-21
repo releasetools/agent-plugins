@@ -33,7 +33,7 @@ value or repeats it back.
 
 ```shell
 mise use --global node@24 \
-  'npm:@releasetools/mutex[allow_low_downloads=true]@latest'
+  'npm:@releasetools/mutex[allow_low_downloads=true]@1'
 mutex version
 ```
 
