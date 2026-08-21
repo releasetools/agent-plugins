@@ -68,9 +68,25 @@ is a major.
 
 `plugins/mutex/skills/mutex/agent-lock.mjs` wraps the `mutex` CLI. It knows that
 CLI's subcommands, flags, exit codes and the shape of its `--json`, so the two
-move together even though their versions do not. The tests cover the helper
-against a shell stub that answers however the helper expects, which is not the
-same as covering it against the real thing.
+move together even though their versions do not. `agent-lock.test.ts` answers
+it with a shell stub, which proves the helper reads its own stub correctly and
+nothing about the CLI.
+
+`__tests__/contract.test.mjs` covers the other half: it runs the helper against
+a published mutex and a real database, so a renamed flag or a changed exit code
+upstream fails a build here. It needs both to run, and skips when it has
+neither:
+
+```shell
+MUTEX_CONTRACT_DATABASE_URL=postgres://... npm test
+```
+
+CI runs it against `@releasetools/mutex@latest` - unpinned on purpose, because
+the point is to find out what the plugin meets in the wild - on every pull
+request and once a week, since the seam can break with nothing changing here.
+Anything the helper uses that is newer than the published CLI is gated on a
+version and skips with a note saying which, so it turns itself on the day that
+version ships.
 
 **Before opening a pull request that has the helper use something new from the
 CLI - a subcommand, a flag, an exit code, a field in `--json` - check that a
