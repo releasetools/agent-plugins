@@ -23,3 +23,7 @@ Print the id it returns, alone, and stop. No lock is taken and nothing is
 looked up, so there is nothing to summarise. If it exits 2 the input broke a
 naming rule and the message names it - quote that instead of composing an id
 by hand, which is exactly what this command exists to prevent.
+
+If `$ARGUMENTS` describes an operation rather than a resource - reviewing
+something, deploying somewhere - which lock that operation takes is not this
+command's judgment. Read the naming skill before answering.
