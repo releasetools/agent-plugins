@@ -16,6 +16,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -280,6 +281,337 @@ export function resolveOwner(env = process.env, host = os.hostname()) {
   const session = sessionId(env);
   const who = `${detectAgent(env)}@${machine}`;
   return session ? `${who}:${session}` : who;
+}
+
+// ---------------------------------------------------------------------------
+// Naming
+// ---------------------------------------------------------------------------
+
+/**
+ * One resource, one id, derived rather than composed.
+ *
+ * An advisory lock only excludes callers who ask for the same id, so two
+ * agents that name one resource two ways exclude nobody, and the failure is
+ * silent. Everything below is the shared derivation that closes that gap:
+ * lowercase always, the platform's own identifiers kept verbatim, and the
+ * forge host mapped to a short domain. It is pure string work on purpose -
+ * no database, no network, and no git for the kinds that need no repository -
+ * so two machines handed the same resource print the same id.
+ */
+
+/** The lock table's column is VARCHAR(255); nothing longer can be a lock. */
+const MAX_ID_LENGTH = 255;
+
+/**
+ * The hosts with a lock domain. Anything else is refused by name rather than
+ * guessed at, until a real self-hosted forge decides what it wants.
+ */
+const FORGE_DOMAINS = { "github.com": "gh", "gitlab.com": "glab" };
+
+/** The kinds that need a repository; everything else stands alone. */
+const FORGE_KINDS = ["issue", "pr", "mr", "branch", "release", "admin", "wiki"];
+
+/** The kinds that are just their own segments, joined. */
+const PLAIN_KINDS = [
+  "env",
+  "db",
+  "pkg",
+  "dns",
+  "tf",
+  "role",
+  "cron",
+  "announce",
+  "secret",
+];
+
+/**
+ * The repository behind a git remote URL, whatever the URL's spelling.
+ *
+ * `git@github.com:Owner/Repo.git`, `https://github.com/owner/repo` and
+ * `ssh://git@github.com/owner/repo.git` all name the same repository, and
+ * which spelling the clone used must not change the lock id. The path is kept
+ * whole rather than split into owner and name, because GitLab nests subgroups.
+ */
+export function parseRemoteUrl(url) {
+  const trimmed = (url ?? "").trim();
+  // A scheme first - ssh://, https://, git:// - then the scp-like spelling,
+  // which has no scheme and separates host from path with a colon.
+  const match =
+    /^[a-z+]+:\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\/(.+)$/i.exec(trimmed) ??
+    /^(?:[^@/]+@)?([^/:]+):(.+)$/.exec(trimmed);
+  if (!match) {
+    return null;
+  }
+  const host = match[1].toLowerCase();
+  const slug = match[2].replace(/\.git$/i, "").replace(/^\/+|\/+$/g, "");
+  return slug ? { host, path: slug } : null;
+}
+
+/** The short domain for a forge host, or the error naming the host. */
+function forgeDomain(host) {
+  const domain = FORGE_DOMAINS[host];
+  if (!domain) {
+    throw new Error(
+      `unknown forge host '${host}': github.com (gh/) and gitlab.com (glab/) ` +
+        `are the hosts with lock domains, and an unlisted one is an error ` +
+        `rather than a guess`,
+    );
+  }
+  return domain;
+}
+
+/**
+ * Which repository a forge kind is about, and where the answer came from.
+ *
+ * The origin remote is the default because it cannot drift: everybody cloned
+ * the same repository. `--repo` is for naming one from outside a checkout,
+ * shaped like gh's own flag - `<owner>/<name>`, or `<host>/<path>` when the
+ * host is not github.com - and `--remote` reads a different remote of this
+ * checkout. Never both: two answers to one question is the disease this
+ * command treats.
+ */
+function resolveForgeRepo(options = {}) {
+  if (options.repo && options.remote) {
+    throw new Error("pass --repo or --remote, not both");
+  }
+
+  if (options.repo) {
+    const given = options.repo.toLowerCase().replace(/^\/+|\/+$/g, "");
+    const segments = given.split("/");
+    if (segments.length < 2 || segments.includes("")) {
+      throw new Error(
+        `--repo takes <owner>/<name>, or <host>/<path> for a host that is ` +
+          `not github.com, not '${options.repo}'`,
+      );
+    }
+    const host = segments.length > 2 ? segments[0] : "github.com";
+    const slug = (segments.length > 2 ? segments.slice(1) : segments).join("/");
+    return { domain: forgeDomain(host), slug, source: "argument" };
+  }
+
+  const remote = options.remote ?? "origin";
+  if (remote.startsWith("-")) {
+    throw new Error(`--remote must name a git remote, not '${remote}'`);
+  }
+  const result = spawnSync(
+    options.gitExecutable ?? "git",
+    ["remote", "get-url", "--", remote],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      encoding: "utf8",
+      env: options.env ?? process.env,
+    },
+  );
+  if (result.error?.code === "ENOENT") {
+    throw new Error("git is not on PATH; pass --repo <owner>/<name> instead");
+  }
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `no '${remote}' remote to read here; run this inside the repository, ` +
+        `or pass --repo <owner>/<name>`,
+    );
+  }
+  const parsed = parseRemoteUrl(result.stdout);
+  if (!parsed) {
+    throw new Error(
+      `could not read a repository out of the '${remote}' remote's URL`,
+    );
+  }
+  return {
+    domain: forgeDomain(parsed.host),
+    slug: parsed.path.toLowerCase(),
+    source: `${remote} remote`,
+  };
+}
+
+/**
+ * The first rule an id breaks, as the error - or nothing.
+ *
+ * The grammar is `^[a-z0-9._-]+(/[a-z0-9._-]+)*$`, with one exception: npm
+ * publishes scoped packages, so the segments after `pkg/npm/` may open with
+ * `@`, and the id matches the name as published.
+ */
+function assertGrammar(id) {
+  if (!id) {
+    throw new Error("an id cannot be empty");
+  }
+  if (id !== id.toLowerCase()) {
+    throw new Error(`ids are lowercase: '${id}'`);
+  }
+  if (id.startsWith("/") || id.endsWith("/")) {
+    throw new Error(`ids take no leading or trailing slash: '${id}'`);
+  }
+  const segments = id.split("/");
+  const npmPackage = segments[0] === "pkg" && segments[1] === "npm";
+  segments.forEach((segment, index) => {
+    if (segment === "") {
+      throw new Error(`ids have no empty segments: '${id}'`);
+    }
+    const pattern =
+      npmPackage && index >= 2 ? /^@?[a-z0-9._-]+$/ : /^[a-z0-9._-]+$/;
+    if (!pattern.test(segment)) {
+      throw new Error(
+        `segment '${segment}' has characters outside [a-z0-9._-]: '${id}'`,
+      );
+    }
+  });
+}
+
+/**
+ * An id the lock table can hold.
+ *
+ * Past 255 characters the final segment becomes the first 12 hex characters
+ * of its sha256 - deterministic, so every agent shortens to the same id - and
+ * the check reruns. An id still over after that is refused, because a second
+ * guess would be this tool naming the resource instead of deriving it.
+ */
+function fitId(joined) {
+  assertGrammar(joined);
+  if (joined.length <= MAX_ID_LENGTH) {
+    return joined;
+  }
+  const segments = joined.split("/");
+  const final = segments[segments.length - 1];
+  const digest = createHash("sha256").update(final).digest("hex").slice(0, 12);
+  const shortened = [...segments.slice(0, -1), digest].join("/");
+  assertGrammar(shortened);
+  if (shortened.length > MAX_ID_LENGTH) {
+    throw new Error(
+      `the id is ${shortened.length} characters even after its final segment ` +
+        `became 12 hex of its sha256, and at most ${MAX_ID_LENGTH} fit; ` +
+        `shorten the earlier segments`,
+    );
+  }
+  return shortened;
+}
+
+/** A forge number as the platform prints it: decimal, unpadded. */
+function forgeNumber(kind, value) {
+  if (!/^\d+$/.test(value ?? "")) {
+    throw new Error(`'${kind}' takes a number, not '${value ?? ""}'`);
+  }
+  return value.replace(/^0+(?=\d)/, "");
+}
+
+/**
+ * The lock id for a resource, as `name <kind> [args...]` computes it.
+ *
+ * Returns `{id, kind, source}`, where source says what was read - "origin
+ * remote", "argument", "hostname". Throws the first rule the input broke;
+ * the caller turns that into stderr and exit 2.
+ */
+export function deriveName(kind, args = [], options = {}) {
+  const want = (kind ?? "").toLowerCase();
+  const finish = (parts, source) => {
+    const id = fitId(parts.join("/").toLowerCase());
+    return { id, kind: want, source };
+  };
+
+  if (want === "check") {
+    if (args.length !== 1) {
+      throw new Error("'check' takes exactly one id");
+    }
+    const id = args[0];
+    assertGrammar(id);
+    if (id.length > MAX_ID_LENGTH) {
+      throw new Error(
+        `ids are at most ${MAX_ID_LENGTH} characters, and this one is ${id.length}`,
+      );
+    }
+    return { id, kind: want, source: "argument" };
+  }
+
+  if (FORGE_KINDS.includes(want)) {
+    const { domain, slug, source } = resolveForgeRepo(options);
+    // The platform's own word is kept, the same verbatim principle that
+    // governs ids: a GitHub number after 'mr' is somebody misremembering
+    // which forge they are on, which is worth an error rather than an alias.
+    if (want === "pr" && domain === "glab") {
+      throw new Error(
+        "on gitlab.com the word is 'mr' (merge request): use 'mr'",
+      );
+    }
+    if (want === "mr" && domain === "gh") {
+      throw new Error(
+        "on github.com the word is 'pr' (pull request): use 'pr'",
+      );
+    }
+    if (want === "release" || want === "admin") {
+      if (args.length !== 0) {
+        throw new Error(`'${want}' takes no arguments`);
+      }
+      return finish([domain, slug, want], source);
+    }
+    if (args.length !== 1) {
+      throw new Error(
+        `'${want}' takes exactly one ${
+          want === "branch"
+            ? "branch name"
+            : want === "wiki"
+              ? "slug"
+              : "number"
+        }`,
+      );
+    }
+    const tail =
+      want === "branch" || want === "wiki"
+        ? args[0]
+        : forgeNumber(want, args[0]);
+    return finish([domain, slug, want, tail], source);
+  }
+
+  if (want === "notion") {
+    const facet = (args[0] ?? "").toLowerCase();
+    if (args.length !== 2 || (facet !== "page" && facet !== "db")) {
+      throw new Error("'notion' takes 'page' or 'db' and one id");
+    }
+    return finish(["notion", facet, args[1]], "argument");
+  }
+
+  if (want === "doc") {
+    if (args.length !== 2) {
+      throw new Error("'doc' takes a collection and one number or slug");
+    }
+    // Doc numbers are zero-padded to four where forge numbers are echoed
+    // unpadded: forge numbers are the platform's, these are our own public
+    // face and sort as filenames.
+    const entry = /^\d+$/.test(args[1])
+      ? args[1].replace(/^0+(?=\d)/, "").padStart(4, "0")
+      : args[1];
+    return finish(["doc", args[0], entry], "argument");
+  }
+
+  if (want === "host") {
+    if (args.length === 0) {
+      throw new Error(
+        "'host' takes the machine-scoped resource, as in 'host port 5625'",
+      );
+    }
+    const machine =
+      (options.host ?? os.hostname()).split(".")[0] || "localhost";
+    return finish(["host", machine, ...args], "hostname");
+  }
+
+  if (PLAIN_KINDS.includes(want)) {
+    const minimum = want === "pkg" ? 2 : 1;
+    if (args.length < minimum) {
+      throw new Error(
+        want === "pkg"
+          ? "'pkg' takes a registry and a package, as in 'pkg npm @releasetools/mutex'"
+          : `'${want}' needs at least one segment`,
+      );
+    }
+    return finish([want, ...args], "argument");
+  }
+
+  throw new Error(
+    `unknown kind '${kind ?? ""}': ${FORGE_KINDS.join(", ")} name forge ` +
+      `resources; ${PLAIN_KINDS.join(", ")}, host, notion page|db and doc ` +
+      `need no repository; 'check <id>' validates an id you already have`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1290,6 +1622,30 @@ export function commandNudge(options = {}) {
   return EXIT_OK;
 }
 
+/**
+ * Derives the lock id for a resource, and prints it alone.
+ *
+ * The id is the whole answer and stdout carries nothing else - diagnostics go
+ * to stderr, the same split the CLI keeps - so `id="$(... name pr 98)"`
+ * composes. Exit 2 carries the first rule the input broke.
+ */
+export function commandName(positionals, options = {}) {
+  const stdout = options.stdout ?? process.stdout;
+  const stderr = options.stderr ?? process.stderr;
+  const [kind, ...args] = positionals;
+
+  let named;
+  try {
+    named = deriveName(kind, args, options);
+  } catch (error) {
+    write(stderr, `agent-lock: name: ${error.message}`);
+    return EXIT_USAGE;
+  }
+
+  write(stdout, options.json ? JSON.stringify(named, null, 2) : named.id);
+  return EXIT_OK;
+}
+
 /** Drops a recorded lock without touching the lock itself. */
 export function commandForget(id, options = {}) {
   const file =
@@ -1374,6 +1730,8 @@ const OPTION_CONFIG = {
   wait: { type: "string", short: "w" },
   owner: { type: "string", short: "o" },
   profile: { type: "string", short: "p" },
+  repo: { type: "string" },
+  remote: { type: "string" },
   try: { type: "boolean" },
   grant: { type: "boolean" },
   all: { type: "boolean" },
@@ -1390,6 +1748,12 @@ Usage: node ${invocation} <command> [<id>] [options]
 Commands:
   preflight        Report whether mutex can reach the lock table here
                    (--grant also adds the permission rules it needs)
+  name <kind> ...  Derive a resource's lock id and print it alone, so every
+                   agent computes the same one: issue, pr, mr, branch,
+                   release, admin and wiki read the origin remote; env, db,
+                   pkg, dns, tf, host, role, cron, announce, secret,
+                   notion page|db and doc need no repository; 'name check
+                   <id>' validates an id you already have
   lock <id>        Take a lock, and record what was taken
   renew <id>       Extend a recorded lock, keeping its owner
   unlock <id>      Hand a recorded lock back
@@ -1407,14 +1771,18 @@ Options:
       --try                   One attempt, no waiting
   -o, --owner <name>          Override the recorded owner
   -p, --profile <name>        Use one mutex profile for this command
+      --repo <owner>/<name>   name: this repository instead of the origin
+                              remote (<host>/<path> when not github.com)
+      --remote <name>         name: read this git remote instead of origin
       --all                   status: the whole table, not only your locks
       --json                  Machine-readable output
       --no-color              No ANSI colour in the status line
   -h, --help                  Show this
 
-Everything it does goes through the mutex CLI, which reads its connection
-string from $MUTEX_DATABASE_URL and from nowhere else. This script never sees
-it, never prints it, and never passes it as an argument.
+Every lock operation goes through the mutex CLI, which reads its connection
+string from $MUTEX_DATABASE_URL and from nowhere else; 'name' derives ids from
+strings alone and opens no connection at all. This script never sees the
+secret, never prints it, and never passes it as an argument.
 `;
 }
 
@@ -1471,6 +1839,8 @@ export function main(argv, options = {}) {
       reason: values.reason,
       owner: values.owner?.trim() || undefined,
       profile: values.profile?.trim() || undefined,
+      repo: values.repo?.trim() || undefined,
+      remote: values.remote?.trim() || undefined,
       single: values.try === true,
       grant: values.grant === true,
       all: values.all === true,
@@ -1491,6 +1861,8 @@ export function main(argv, options = {}) {
   switch (command) {
     case "preflight":
       return commandPreflight(shared);
+    case "name":
+      return commandName(positionals.slice(1), shared);
     case "lock":
       return commandLock(id, shared);
     case "renew":

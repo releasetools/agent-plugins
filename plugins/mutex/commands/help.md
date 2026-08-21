@@ -7,6 +7,7 @@ argument-hint: ""
 Tell the user this, in your own words but no longer, and run nothing:
 
 - `/mutex:preflight` - can mutex reach its lock table here
+- `/mutex:name <kind> [args...]` - derive a resource's lock id, the same on every machine
 - `/mutex:lock <id> [reason]` - take a lock, an hour by default
 - `/mutex:status [id]` - what you hold, and who holds the rest
 - `/mutex:renew <id> [seconds]` - extend one before it lapses
