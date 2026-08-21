@@ -9,6 +9,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  # The plugin drives a CLI released from another repository on its own
+  # schedule, so the seam can break with nothing changing here.
+  schedule:
+    - cron: "17 6 * * 1"
 
 # Deny by default; each job grants only what it needs.
 permissions: {}
@@ -25,6 +29,9 @@ env:
   CLAUDE_CODE_VERSION: "2.1.235"
   # renovate: datasource=npm depName=@openai/codex
   CODEX_VERSION: "0.147.0"
+  # Deliberately not pinned. The contract suite exists to find out what the
+  # plugin meets in the wild, and what it meets is whatever npm serves today.
+  MUTEX_CLI_VERSION: "latest"
 
 jobs:
   checks:
@@ -182,6 +189,55 @@ jobs:
           fi
           echo "Codex installed ${PLUGIN} ${installed}"
 
+  # The plugin's helper drives the mutex CLI: it knows the subcommands, the
+  # flags, the exit codes and the shape of `--json`. Its own tests answer it
+  # with a shell stub, which proves it reads its own stub correctly and nothing
+  # about the CLI. This runs it against a published mutex and a real database,
+  # which is the only place a rename upstream shows up before a user finds it.
+  contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: mutex_test
+          POSTGRES_USER: mutex
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mutex -d mutex_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: package.json
+          cache: npm
+
+      - name: 📦 Install
+        run: npm ci
+
+      - name: 📦 Install the published mutex CLI
+        run: |
+          npm install --global "@releasetools/mutex@${MUTEX_CLI_VERSION}"
+          mutex version
+
+      # A suite that quietly runs nothing reports green for a seam nobody
+      # checked, so the tests fail rather than skip when this is set and the
+      # CLI is not there.
+      - name: ✅ The CLI still answers the way the helper expects
+        env:
+          MUTEX_CONTRACT_DATABASE_URL: postgresql://mutex@localhost:5432/mutex_test
+        run: npm test -- __tests__/contract.test.mjs
+
   # One check name that stays true as the catalog grows.
   #
   # `install` is a matrix, so its checks are named after the plugins in it -
@@ -191,7 +247,7 @@ jobs:
   # until somebody edits a repository setting. This is the one to require.
   validated:
     if: always()
-    needs: [checks, install]
+    needs: [checks, install, contract]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
@@ -199,13 +255,14 @@ jobs:
         env:
           CHECKS: ${{ needs.checks.result }}
           INSTALL: ${{ needs.install.result }}
+          CONTRACT: ${{ needs.contract.result }}
         run: |
           set -euo pipefail
 
-          echo "checks: ${CHECKS}, install: ${INSTALL}"
+          echo "checks: ${CHECKS}, install: ${INSTALL}, contract: ${CONTRACT}"
 
           # `install` is skipped, legitimately, while no plugin is published.
-          for result in "$CHECKS" "$INSTALL"; do
+          for result in "$CHECKS" "$INSTALL" "$CONTRACT"; do
             case "$result" in
               success | skipped) ;;
               *)
