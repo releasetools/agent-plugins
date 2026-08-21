@@ -45,14 +45,15 @@ missing when it is not.
 
 ## Commands
 
-| Command                       |                                                      |
-| ----------------------------- | ---------------------------------------------------- |
-| `/mutex:preflight`            | Can mutex reach its lock table here, and if not, why |
-| `/mutex:lock <id> [reason]`   | Take a lock, an hour by default                      |
-| `/mutex:status [id]`          | Who holds a lock, and what this session holds        |
-| `/mutex:renew <id> [seconds]` | Extend a lock before it lapses                       |
-| `/mutex:unlock <id>`          | Hand it back                                         |
-| `/mutex:help`                 | What the plugin does, and what it will not           |
+| Command                         |                                                          |
+| ------------------------------- | -------------------------------------------------------- |
+| `/mutex:preflight`              | Can mutex reach its lock table here, and if not, why     |
+| `/mutex:lock <id> [reason]`     | Take a lock, an hour by default                          |
+| `/mutex:status [id]`            | Who holds a lock, and what this session holds            |
+| `/mutex:renew <id> [seconds]`   | Extend a lock before it lapses                           |
+| `/mutex:unlock <id>`            | Hand it back                                             |
+| `/mutex:callsign <kind> [args]` | The lock id for a resource, derived rather than composed |
+| `/mutex:help`                   | What the plugin does, and what it will not               |
 
 An hour rather than the CLI's minute, because a conversation does not know how
 long it will take, and a lease that lapses mid-conversation hands the resource
