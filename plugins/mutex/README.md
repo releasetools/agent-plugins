@@ -59,6 +59,11 @@ An hour rather than the CLI's minute, because a conversation does not know how
 long it will take, and a lease that lapses mid-conversation hands the resource
 to somebody else while the work is still going on.
 
+Two skills ride along: `mutex`, the judgment around a lock being taken, and
+`naming`, which decides which lock an operation takes and what it is called.
+`/mutex:callsign` derives the id from the resource, so every agent computes the
+same one.
+
 ## What it will not do
 
 It takes a lock when you ask for one, hands it back when the work is done, and
