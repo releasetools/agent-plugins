@@ -23,7 +23,7 @@ __tests__/                        Jest, run by `npm test`
 
 ## The two catalogs
 
-Both name the marketplace `releasetools`, so `mutex@releasetools` means the same
+Both name the marketplace `ReleaseTools`, so `mutex@ReleaseTools` means the same
 thing in either client. They describe the same plugins in the same order, and
 each keeps its own client's schema:
 
@@ -120,18 +120,14 @@ Gemini and Antigravity - the agents that read no manifest and have no checkout.
 ## The website
 
 [releasetools/website](https://github.com/releasetools/website) documents the
-releasetools tools, and **the plugin is not on it**. `docs/mutex.md` describes
-the CLI and the Action, and says nothing about this marketplace, the skill or
-the slash commands.
+ReleaseTools tools, and the plugin is on it. `docs/mutex.md` carries an
+`## Agent plugin` section covering the marketplace install commands, both
+skills, and every entry in the slash menu, alongside the CLI and the Action.
+There is no `docs/agent-plugins.md`, and a second page would only repeat it.
 
-So the first release that wants it there has a page to write: add
-`docs/agent-plugins.md`, and list it under `Tools` in `sidebars.ts` next to
-`mutex` and `cli`. `plugins/<name>/README.md` is the closest thing to a source -
-it is what an agent host shows next to an install button.
-
-After that, **a release that changes what a user sees needs a pull request there
-too**: the install commands, what is in the slash menu, what the skill will and
-will not do. It is a separate repository with its own deploy, so nothing here
+**A release that changes what a user sees needs a pull request there too**: the
+install commands, what is in the slash menu, what the skill will and will not
+do. It is a separate repository with its own deploy, so nothing here
 updates it and nothing notices when it drifts.
 
 ## Before committing

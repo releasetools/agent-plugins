@@ -1,6 +1,6 @@
-# releasetools agent plugins
+# ReleaseTools agent plugins
 
-The plugin marketplace for [releasetools](https://github.com/releasetools),
+The plugin marketplace for [ReleaseTools](https://github.com/releasetools),
 serving Claude Code and Codex from one catalog each.
 
 Add the marketplace once. Everything after that is installing plugins from it.
@@ -9,7 +9,7 @@ Add the marketplace once. Everything after that is installing plugins from it.
 
 ```shell
 claude plugin marketplace add releasetools/agent-plugins
-claude plugin install mutex@releasetools
+claude plugin install mutex@ReleaseTools
 ```
 
 Both steps work as `/plugin marketplace add` and `/plugin install` inside a
@@ -19,7 +19,7 @@ session.
 
 ```shell
 codex plugin marketplace add releasetools/agent-plugins
-codex plugin add mutex@releasetools
+codex plugin add mutex@ReleaseTools
 ```
 
 ## What is published
@@ -55,8 +55,8 @@ Claude Code:
 ```shell
 claude plugin marketplace list      # which marketplaces are configured
 claude plugin list                  # what is installed, and at which version
-claude plugin marketplace update releasetools
-claude plugin update mutex@releasetools
+claude plugin marketplace update ReleaseTools
+claude plugin update mutex@ReleaseTools
 ```
 
 Codex:
@@ -65,7 +65,7 @@ Codex:
 codex plugin marketplace list
 codex plugin list
 codex plugin marketplace upgrade    # refresh the marketplace snapshot first
-codex plugin add mutex@releasetools # then install the version it now offers
+codex plugin add mutex@ReleaseTools # then install the version it now offers
 ```
 
 Codex reads a snapshot of this repository, so a plugin update arrives only after
@@ -74,13 +74,13 @@ the marketplace itself is refreshed.
 ## Removing it
 
 ```shell
-claude plugin uninstall mutex@releasetools
-claude plugin marketplace remove releasetools
+claude plugin uninstall mutex@ReleaseTools
+claude plugin marketplace remove ReleaseTools
 ```
 
 ```shell
-codex plugin remove mutex@releasetools
-codex plugin marketplace remove releasetools
+codex plugin remove mutex@ReleaseTools
+codex plugin marketplace remove ReleaseTools
 ```
 
 ## Which clients this is tested with

@@ -1,7 +1,7 @@
 {
-  "name": "releasetools",
+  "name": "ReleaseTools",
   "interface": {
-    "displayName": "releasetools"
+    "displayName": "ReleaseTools"
   },
   "plugins": [
     {

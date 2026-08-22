@@ -50,14 +50,14 @@ export function readJson(root, relative) {
 export function marketplace(overrides = {}) {
   const root = temporary("marketplace");
   writeJson(root, ".claude-plugin/marketplace.json", {
-    name: overrides.name ?? "releasetools",
-    owner: { name: "releasetools" },
-    description: "Official releasetools plugins for coding agents",
+    name: overrides.name ?? "ReleaseTools",
+    owner: { name: "ReleaseTools" },
+    description: "Official ReleaseTools plugins for coding agents",
     plugins: [],
   });
   writeJson(root, ".agents/plugins/marketplace.json", {
-    name: overrides.name ?? "releasetools",
-    interface: { displayName: "releasetools" },
+    name: overrides.name ?? "ReleaseTools",
+    interface: { displayName: "ReleaseTools" },
     plugins: [],
   });
   return root;
@@ -73,7 +73,7 @@ export function plugin(root, name, overrides = {}) {
     name,
     version,
     description,
-    author: { name: "releasetools" },
+    author: { name: "ReleaseTools" },
     homepage: `https://github.com/releasetools/${name}#readme`,
     repository: `https://github.com/releasetools/${name}`,
     license: "Apache-2.0",
@@ -84,7 +84,7 @@ export function plugin(root, name, overrides = {}) {
     name,
     version,
     description,
-    author: { name: "releasetools" },
+    author: { name: "ReleaseTools" },
     license: "Apache-2.0",
     skills: "./skills/",
     commands: "./commands/",
