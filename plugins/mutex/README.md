@@ -14,14 +14,14 @@ Claude Code:
 
 ```shell
 claude plugin marketplace add releasetools/agent-plugins
-claude plugin install mutex@releasetools
+claude plugin install mutex@ReleaseTools
 ```
 
 Codex:
 
 ```shell
 codex plugin marketplace add releasetools/agent-plugins
-codex plugin add mutex@releasetools
+codex plugin add mutex@ReleaseTools
 ```
 
 ## What it needs
