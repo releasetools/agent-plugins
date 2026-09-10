@@ -30,6 +30,12 @@ import { parseArgs } from "node:util";
  * root of a repository or a release archive, and every plugin here is in a
  * subdirectory, so a copy is the only way in.
  *
+ * Google retired Gemini CLI for individual accounts on 18 June 2026 in favour
+ * of Antigravity CLI, so that route now serves the Gemini Code Assist licences
+ * and API keys that still reach it, and nothing else. Antigravity is not among
+ * them: it reads `~/.gemini/config/skills` and its own plugin directory, not
+ * the `~/.gemini/skills` this writes.
+ *
  * It still installs for Hermes and Antigravity on request, and the mutex npm
  * package runs it from its own top level, where a global CLI installation is
  * the only checkout most people have.
@@ -54,7 +60,6 @@ export const TARGETS = [
     // so the same command files are rendered on the way in. Subdirectories are
     // namespaces there, so `commands/mutex/lock.toml` is `/mutex:lock`.
     commands: "commands",
-    note: "Antigravity reads the same directory",
   },
   {
     agent: "claude",

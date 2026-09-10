@@ -33,10 +33,13 @@ agy plugin install https://github.com/releasetools/agent-plugins
 hermes plugins install releasetools/agent-plugins/plugins/release-notes
 ```
 
-## Gemini and Antigravity's IDE
+## Gemini CLI
 
-Gemini CLI installs an extension only from the root of a repository, and every
-plugin here lives in a subdirectory, so it takes a copy instead:
+Google retired it for individual accounts on 18 June 2026 in favour of
+Antigravity, so this route serves the Gemini Code Assist licences and API keys
+that still reach it. It installs an extension only from the root of a
+repository, and every plugin here lives in a subdirectory, so it takes a copy
+instead:
 
 ```shell
 git clone https://github.com/releasetools/agent-plugins

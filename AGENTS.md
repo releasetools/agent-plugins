@@ -96,12 +96,14 @@ hermes plugins doctor plugins/<name>
 agy plugin validate plugins/<name>
 ```
 
-Gemini CLI is the one that cannot install from here. Its extensions require
-`gemini-extension.json` at the absolute root of a repository or a release
-archive, and it has no notion of an extension inside a monorepo. Until that is
-settled, `scripts/install-agent-skills.mjs` copies skills and rendered TOML
-commands into `~/.gemini`, namespaced by plugin, so `commands/release-notes/
-draft.toml` is `/release-notes:draft`:
+Gemini CLI is the one that cannot install from here, and is also the one on its
+way out: Google retired it for individual accounts on 18 June 2026 in favour of
+Antigravity CLI, and it now reaches only the Gemini Code Assist licences and API
+keys that still serve it. Its extensions require `gemini-extension.json` at the
+absolute root of a repository or a release archive, and it has no notion of an
+extension inside a monorepo, so `scripts/install-agent-skills.mjs` copies skills
+and rendered TOML commands into `~/.gemini` instead, namespaced by plugin, so
+`commands/release-notes/draft.toml` is `/release-notes:draft`:
 
 ```shell
 npm run install-skills -- --check              # what is missing or out of date
@@ -112,6 +114,10 @@ That directory is flat, so two plugins cannot both ship a skill called
 `naming`. The installer refuses the pair rather than letting one overwrite the
 other, which would leave an agent following instructions from a plugin nobody
 installed.
+
+Antigravity does not read what that writes. It looks in `~/.gemini/config/skills`
+and its own plugin directory, so `agy plugin install` is its only route here and
+the copy is Gemini CLI's alone.
 
 ## mutex, and the CLI it drives
 

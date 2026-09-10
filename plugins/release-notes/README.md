@@ -35,8 +35,9 @@ hermes plugins install releasetools/agent-plugins/plugins/release-notes
 agy plugin install https://github.com/releasetools/agent-plugins
 ```
 
-`agy` takes every plugin in the repository. Gemini CLI installs an extension
-only from a repository root, so it takes a copy instead, with
+`agy` takes every plugin in the repository. Gemini CLI, retired for individual
+accounts in June 2026, installs an extension only from a repository root, so
+where it still runs it takes a copy instead:
 `node agent-plugins/scripts/install-agent-skills.mjs --plugin release-notes` from a
 checkout.
 
