@@ -29,6 +29,7 @@ const {
   DEFAULT_TARGETS,
   installAgentSkills,
   renderGeminiCommand,
+  shippedPlugins,
   shippedSkills,
 } = installer;
 
@@ -40,13 +41,14 @@ const {
  * and getting a conversation instead.
  */
 
-/** The published plugin, which is the thing these checks are about. */
-const PLUGIN = path.resolve(
+/** This checkout, which publishes every plugin under `plugins/`. */
+const MARKETPLACE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
-  "plugins",
-  "mutex",
 );
+
+/** One published plugin, which is the thing most of these checks are about. */
+const PLUGIN = path.join(MARKETPLACE, "plugins", "mutex");
 
 const MANIFEST = {
   name: "mutex",
@@ -524,5 +526,113 @@ describe("installAgentSkills", () => {
         targets: ["emacs"],
       }),
     ).toThrow(/unknown agent/);
+  });
+
+  /**
+   * The agents that read a manifest get every plugin in the marketplace. The
+   * ones that read a directory used to get one, which is a plugin that ships
+   * and reaches four agents out of six.
+   */
+  it("installs every plugin in the marketplace, not one of them", () => {
+    const root = home([".gemini"]);
+    const { plugins } = installAgentSkills({ root: MARKETPLACE, home: root });
+
+    expect(plugins.map((plugin: { name: string }) => plugin.name)).toEqual([
+      "mutex",
+      "release-notes",
+    ]);
+    for (const skill of ["mutex", "naming", "release-notes"]) {
+      expect(
+        fs.existsSync(path.join(root, `.gemini/skills/${skill}/SKILL.md`)),
+      ).toBe(true);
+    }
+    expect(
+      fs.existsSync(
+        path.join(root, ".gemini/commands/release-notes/draft.toml"),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(root, ".gemini/commands/mutex/lock.toml")),
+    ).toBe(true);
+  });
+
+  it("gives each plugin its own command namespace and skills path", () => {
+    const root = home([".gemini"]);
+    installAgentSkills({ root: MARKETPLACE, home: root });
+
+    const draft = fs.readFileSync(
+      path.join(root, ".gemini/commands/release-notes/draft.toml"),
+      "utf8",
+    );
+    expect(draft).not.toContain("CLAUDE_PLUGIN_ROOT");
+    expect(draft).toContain(
+      path.join(root, ".gemini/skills/release-notes/agent-notes.mjs"),
+    );
+  });
+
+  it("installs one plugin when it is named", () => {
+    const root = home([".gemini"]);
+    const { plugins } = installAgentSkills({
+      root: MARKETPLACE,
+      home: root,
+      plugins: ["release-notes"],
+    });
+
+    expect(plugins).toHaveLength(1);
+    expect(fs.existsSync(path.join(root, ".gemini/skills/release-notes"))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(root, ".gemini/skills/mutex"))).toBe(false);
+    expect(fs.existsSync(path.join(root, ".gemini/commands/mutex"))).toBe(
+      false,
+    );
+  });
+
+  it("refuses a plugin this tree does not have", () => {
+    expect(() =>
+      installAgentSkills({
+        root: MARKETPLACE,
+        home: home([]),
+        plugins: ["callsign"],
+      }),
+    ).toThrow(/unknown plugin\(s\): callsign/);
+  });
+
+  /**
+   * Every agent here reads one flat skills directory, so two plugins claiming
+   * the same skill name would leave whichever sorted later in place and the
+   * other agent following instructions from a plugin nobody installed.
+   */
+  it("refuses two plugins that ship the same skill name", () => {
+    const tree = home([]);
+    for (const plugin of ["alpha", "beta"]) {
+      const skill = path.join(tree, "plugins", plugin, "skills", "shared");
+      fs.mkdirSync(skill, { recursive: true });
+      fs.writeFileSync(path.join(skill, "SKILL.md"), `from ${plugin}\n`);
+    }
+
+    expect(() => installAgentSkills({ root: tree, home: home([]) })).toThrow(
+      /both ship a skill called 'shared'/,
+    );
+  });
+
+  /**
+   * A published npm package carries one plugin's `skills/` and `commands/` at
+   * the top level, because a global install is the only checkout most people
+   * have. The directory it unpacks into is the plugin's name.
+   */
+  it("reads a package that carries one plugin at its top level", () => {
+    const tree = path.join(home([]), "release-notes");
+    fs.mkdirSync(path.join(tree, "skills", "release-notes"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(tree, "skills", "release-notes", "SKILL.md"),
+      "---\nname: release-notes\n---\n",
+    );
+
+    expect(shippedPlugins(tree)).toEqual([
+      { name: "release-notes", root: tree },
+    ]);
   });
 });

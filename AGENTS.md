@@ -64,6 +64,29 @@ Semver is judged from what an agent sees: new commands or skills are a minor,
 wording and fixes are a patch, and removing a command or changing what one does
 is a major.
 
+## The agents that read no manifest
+
+Hermes, Gemini and Antigravity discover skills by walking a directory under
+their own home, so `scripts/install-agent-skills.mjs` copies every plugin's
+`skills/` into each of them. It finds the plugins the way the catalogs do, by
+reading `plugins/`, so a new plugin reaches these three on the day it reaches
+the two that read a manifest.
+
+```shell
+npm run install-skills -- --check              # what is missing or out of date
+npm run install-skills -- --plugin mutex       # one of them
+```
+
+Gemini also takes commands, as TOML, rendered on the way in and namespaced by
+plugin: `commands/release-notes/draft.toml` is `/release-notes:draft`. A plugin
+gets its commands only when all of its skills are installed, since a menu entry
+naming a helper that was never copied fails at the moment somebody runs it.
+
+That skills directory is flat, so two plugins cannot both ship a skill called
+`naming`. The installer refuses the pair rather than letting one overwrite the
+other, which would leave an agent following instructions from a plugin nobody
+installed.
+
 ## mutex, and the CLI it drives
 
 `plugins/mutex/skills/mutex/agent-lock.mjs` wraps the `mutex` CLI. It knows that
