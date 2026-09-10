@@ -114,7 +114,13 @@ releasing another's.
 
 Where nothing in the environment names a session the owner is the agent and
 host alone, and every session on that machine shares it. `/mutex:preflight`
-says so when that is the case.
+says so when that is the case, and the fix is for the user to export
+`$MUTEX_SESSION_ID` with anything that differs between their sessions. Suggest
+it rather than working around it: locks that cannot tell two sessions apart are
+locks either can take back.
+
+`$MUTEX_AGENT_NAME` renames the agent half for an agent this helper does not
+recognise, which changes what `mutex list` reads like and nothing else.
 
 Only a named lock is protected; an unowned one is open to anyone. The Action
 takes unowned locks unless a workflow sets `owner`.

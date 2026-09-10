@@ -1712,7 +1712,7 @@ export function commandPreflight(options = {}) {
         ? " (from $MUTEX_OWNER)"
         : report.session
           ? ""
-          : " - no session id in the environment, so every session on this machine shares this name and can release its locks"
+          : " - no session id in the environment, so every session on this machine shares this name and can release its locks. Export $MUTEX_SESSION_ID to give this one a name of its own"
     }`,
   ];
   if (report.locks !== null && report.locks !== undefined) {

@@ -91,6 +91,17 @@ the session, as in `claude@workstation:22ca1fea-…` - so `mutex list` names the
 conversation rather than a random string, and one session cannot release
 another's lock.
 
+Three variables change that name, and the first is the one that matters:
+
+| Variable           |                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MUTEX_SESSION_ID` | Names this session, for an agent that publishes no id of its own. Without one, every session on the machine shares a name and can release the others' locks |
+| `MUTEX_AGENT_NAME` | Renames the agent half, for an agent this plugin does not recognise                                                                                         |
+| `MUTEX_OWNER`      | Replaces the whole name. The CLI's own variable, and it wins over both of the above                                                                         |
+
+`/mutex:preflight` prints the name locks will be taken under, and says when it
+is one every session on the machine shares.
+
 What was taken is written to
 `${XDG_STATE_HOME:-$HOME/.local/state}/releasetools-mutex/agent-locks.json`, and
 a `UserPromptSubmit` hook reads it between turns: it asks the agent to check with
