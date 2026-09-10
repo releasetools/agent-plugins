@@ -95,10 +95,11 @@ hermes plugins doctor plugins/<name>
 agy plugin validate plugins/<name>
 ```
 
-Nothing here copies files into an agent's home. Every agent this marketplace
-serves installs the plugin, so `enable`, `update` and `uninstall` mean
-something, and a plugin nobody installed cannot be sitting in a directory
-looking as though somebody did.
+Every agent this marketplace serves installs the plugin, and each unpacks it
+under the plugin directory it manages, so `enable`, `update` and `uninstall`
+mean something. Nothing here copies files into those directories behind a
+tool's back, which is how a plugin nobody installed used to end up sitting in
+one looking as though somebody had.
 
 ## mutex, and the CLI it drives
 
