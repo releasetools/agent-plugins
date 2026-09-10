@@ -64,7 +64,30 @@ Semver is judged from what an agent sees: new commands or skills are a minor,
 wording and fixes are a patch, and removing a command or changing what one does
 is a major.
 
-## The plugin and the CLI it drives
+## The agents that read no manifest
+
+Hermes, Gemini and Antigravity discover skills by walking a directory under
+their own home, so `scripts/install-agent-skills.mjs` copies every plugin's
+`skills/` into each of them. It finds the plugins the way the catalogs do, by
+reading `plugins/`, so a new plugin reaches these three on the day it reaches
+the two that read a manifest.
+
+```shell
+npm run install-skills -- --check              # what is missing or out of date
+npm run install-skills -- --plugin mutex       # one of them
+```
+
+Gemini also takes commands, as TOML, rendered on the way in and namespaced by
+plugin: `commands/release-notes/draft.toml` is `/release-notes:draft`. A plugin
+gets its commands only when all of its skills are installed, since a menu entry
+naming a helper that was never copied fails at the moment somebody runs it.
+
+That skills directory is flat, so two plugins cannot both ship a skill called
+`naming`. The installer refuses the pair rather than letting one overwrite the
+other, which would leave an agent following instructions from a plugin nobody
+installed.
+
+## mutex, and the CLI it drives
 
 `plugins/mutex/skills/mutex/agent-lock.mjs` wraps the `mutex` CLI. It knows that
 CLI's subcommands, flags, exit codes and the shape of its `--json`, so the two
@@ -112,10 +135,31 @@ at 0.1.0 and the CLI at 1.4.0 - so nobody ran into it. The contract suite covers
 that flag now, but it would have found this after the fact; the rule above is
 what stops it being written in the first place.
 
-The `mutex` npm package carries a copy of `skills/` and `commands/`, fetched
-from here when that release is built, so a global install can still seed Hermes,
-Gemini and Antigravity - the agents that read no manifest and have no checkout.
-`install-agent-skills.mjs` is what copies it, and it runs from either home.
+The `mutex` npm package carries a copy of `plugins/mutex/skills/` and
+`commands/` at its top level, fetched from here when that release is built, so a
+global install can seed those three agents without a checkout.
+`install-agent-skills.mjs` runs from either home: it reads `plugins/` here, and
+falls back to the top-level `skills/` there, taking the plugin's name from the
+directory the package unpacked into.
+
+## release-notes, and the git it reads
+
+`plugins/release-notes/skills/release-notes/agent-notes.mjs` shells out to
+`git`, and to `gh` only behind `--pr`. Neither is pinned and neither is
+installed by the plugin, so there is no released version to check a change
+against the way mutex needs one.
+
+`agent-notes.test.ts` builds throwaway repositories with real commits, tags and
+a merge rather than stubbing git. What is worth testing is the parsing: a
+`--numstat` record split on the wrong byte, a merge counted as a change of its
+own, a patch that should have been replaced by its length. A stub would answer
+with whatever the parser expected.
+
+The two files it writes are the contract anything downstream reads:
+`CHANGELOG.md` at the repository root, and `RELEASE_EDITMSG` resolved with
+`git rev-parse --path-format=absolute --git-path`, which puts it per worktree
+and outside the work tree. Changing either name breaks callers that live in
+other repositories and cannot be found from here.
 
 ## The website
 
@@ -124,6 +168,7 @@ ReleaseTools tools, and the plugin is on it. `docs/mutex.md` carries an
 `## Agent plugin` section covering the marketplace install commands, both
 skills, and every entry in the slash menu, alongside the CLI and the Action.
 There is no `docs/agent-plugins.md`, and a second page would only repeat it.
+`release-notes` has no page there at all yet.
 
 **A release that changes what a user sees needs a pull request there too**: the
 install commands, what is in the slash menu, what the skill will and will not

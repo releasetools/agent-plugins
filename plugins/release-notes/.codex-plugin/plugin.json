@@ -1,0 +1,40 @@
+{
+  "name": "release-notes",
+  "version": "0.1.0",
+  "description": "Draft a release's changelog entry from the commits since the last tag",
+  "author": {
+    "name": "ReleaseTools",
+    "url": "https://github.com/releasetools"
+  },
+  "homepage": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release-notes#readme",
+  "repository": "https://github.com/releasetools/agent-plugins",
+  "license": "Apache-2.0",
+  "keywords": [
+    "changelog",
+    "release-notes",
+    "keep-a-changelog",
+    "release",
+    "git",
+    "semver"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "interface": {
+    "displayName": "release-notes",
+    "shortDescription": "Changelog entries ruled from the commits",
+    "longDescription": "Read every commit since the last tag against its own diff, rule on each one by whether a person running the software can observe it, and write the surviving entries to CHANGELOG.md under a version heading and to $GIT_DIR/RELEASE_EDITMSG for whatever publishes the release. The ruling is shown per commit before anything is written, so a change that was left out is visible rather than silently missing.",
+    "developerName": "ReleaseTools",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Rule on every commit in a release against one test",
+      "Flag where a commit message and its diff disagree",
+      "Write the entry to CHANGELOG.md and to the release body file"
+    ],
+    "websiteURL": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release-notes#readme",
+    "defaultPrompt": [
+      "Draft the changelog entry for 0.2.0.",
+      "What changed since the last release?",
+      "Write the release notes for this version."
+    ]
+  }
+}

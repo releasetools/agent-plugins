@@ -35,19 +35,11 @@ import { parseArgs } from "node:util";
  * checkouts they came from.
  */
 
-/**
- * The skill the slash commands invoke their helper from. The commands are the
- * plugin's rather than any one skill's, so they render into this namespace and
- * only when this skill is being installed - a command naming a helper that was
- * not copied would fail at the moment it runs.
- */
-const PLUGIN_SKILL = "mutex";
-
 export const TARGETS = [
   {
     agent: "hermes",
     home: ".hermes",
-    // Hermes groups skills by category; mutex belongs with the devops ones.
+    // Hermes groups skills by category, and these are the devops ones.
     skills: path.join("skills", "devops"),
   },
   {
@@ -65,13 +57,14 @@ export const TARGETS = [
     home: ".claude",
     skills: "skills",
     manifest:
-      "install the plugin instead: /plugin marketplace add releasetools/mutex",
+      "install the plugin instead: /plugin marketplace add releasetools/agent-plugins",
   },
   {
     agent: "codex",
     home: ".codex",
     skills: "skills",
-    manifest: "install the plugin instead: codex plugin add mutex",
+    manifest:
+      "install the plugin instead: codex plugin marketplace add releasetools/agent-plugins",
   },
 ];
 
@@ -101,9 +94,10 @@ function filesUnder(root, prefix = "") {
  * The markdown is the original: Claude Code and Codex both read `commands/`
  * directly, and only Gemini needs a translation. Keeping that translation
  * mechanical - front matter to `description`, body to `prompt`, `$ARGUMENTS`
- * to `{{args}}`, `!`cmd`` to `!{cmd}`, and the plugin root to the path the
- * skill lands at - is what stops the two from drifting into different
- * instructions.
+ * to `{{args}}`, `!`cmd`` to `!{cmd}`, and the plugin root to the directory the
+ * skills land in - is what stops the two from drifting into different
+ * instructions. The rewrite is by prefix, so a command reaching into any of its
+ * plugin's skills resolves without this knowing their names.
  */
 export function renderGeminiCommand(markdown, options = {}) {
   const front = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(markdown);
@@ -115,10 +109,7 @@ export function renderGeminiCommand(markdown, options = {}) {
     // Claude Code substitutes the plugin root and runs `!`cmd`` before the
     // model sees the prompt. Gemini spells that `!{cmd}` and has no plugin
     // root, so the path the skill will actually sit at is written in.
-    .replaceAll(
-      "${CLAUDE_PLUGIN_ROOT}/skills/" + (options.skill ?? "mutex"),
-      options.skillDir ?? ".",
-    )
+    .replaceAll("${CLAUDE_PLUGIN_ROOT}/skills", options.skills ?? ".")
     .replace(/!`([^`]*)`/g, "!{$1}")
     .replaceAll("$ARGUMENTS", "{{args}}")
     // A TOML basic multi-line string, so a backslash or a stray triple quote in
@@ -155,26 +146,30 @@ export function shippedSkills(root) {
  * Every file this agent should end up with, keyed by its path under the agent's
  * home. Copied bytes and rendered commands go through the same map, so
  * `--check` reports staleness for both without knowing the difference.
+ *
+ * Commands are a plugin's rather than a skill's, and they reach into the skills
+ * beside them, so a plugin only gets its command namespace when all of its
+ * skills are being installed. A menu entry naming a file that was never copied
+ * fails at the moment somebody runs it.
  */
-export function plannedFiles(root, skills, target, agentHome = "") {
+export function plannedFiles(installs, target, agentHome = "") {
   const planned = new Map();
 
-  for (const skill of skills) {
-    const source = path.join(root, "skills", skill);
-    for (const relative of filesUnder(source)) {
-      planned.set(
-        path.join(target.skills, skill, relative),
-        fs.readFileSync(path.join(source, relative)),
-      );
+  for (const install of installs) {
+    for (const skill of install.skills) {
+      const source = path.join(install.root, "skills", skill);
+      for (const relative of filesUnder(source)) {
+        planned.set(
+          path.join(target.skills, skill, relative),
+          fs.readFileSync(path.join(source, relative)),
+        );
+      }
     }
-  }
 
-  const commands = path.join(root, "commands");
-  if (
-    target.commands &&
-    skills.includes(PLUGIN_SKILL) &&
-    fs.existsSync(commands)
-  ) {
+    const commands = path.join(install.root, "commands");
+    if (!target.commands || !install.complete || !fs.existsSync(commands)) {
+      continue;
+    }
     for (const entry of fs.readdirSync(commands)) {
       if (!entry.endsWith(".md")) {
         continue;
@@ -182,16 +177,13 @@ export function plannedFiles(root, skills, target, agentHome = "") {
       planned.set(
         path.join(
           target.commands,
-          PLUGIN_SKILL,
+          install.name,
           `${path.basename(entry, ".md")}.toml`,
         ),
         Buffer.from(
           renderGeminiCommand(
             fs.readFileSync(path.join(commands, entry), "utf8"),
-            {
-              skill: PLUGIN_SKILL,
-              skillDir: path.join(agentHome, target.skills, PLUGIN_SKILL),
-            },
+            { skills: path.join(agentHome, target.skills) },
           ),
         ),
       );
@@ -214,27 +206,92 @@ export const PACKAGE_ROOT = path.resolve(
 );
 
 /**
- * Where `skills/` and `commands/` are, in either of the two homes this has.
+ * The plugins a tree ships, in either of the two homes this script has.
  *
- * In this repository they sit inside `plugins/<name>/`, which is the thing
- * published. In the mutex npm package they sit at the top level, because the
- * release copies them there so that a global install can seed the agents that
- * read no manifest and have no checkout. One script, because the alternative is
- * two that drift.
+ * In this repository each one is a directory under `plugins/`, which is the
+ * thing published. In an npm package that carries a plugin, `skills/` and
+ * `commands/` sit at the top level, because the release copies them there so
+ * that a global install can seed the agents that read no manifest and have no
+ * checkout. The package directory is the plugin's name there, which is what
+ * Gemini's command namespace is built from.
+ *
+ * Discovered rather than listed, so a plugin added to `plugins/` reaches these
+ * agents the same day it reaches the two that read a manifest.
  */
-export function defaultRoot(here = PACKAGE_ROOT, plugin = PLUGIN_SKILL) {
-  const inTree = path.join(here, "plugins", plugin);
-  if (fs.existsSync(path.join(inTree, "skills"))) {
+export function shippedPlugins(here = PACKAGE_ROOT) {
+  const directory = path.join(here, "plugins");
+  let names = [];
+  try {
+    names = fs
+      .readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    names = [];
+  }
+
+  const inTree = names
+    .map((name) => ({ name, root: path.join(directory, name) }))
+    .filter((plugin) => fs.existsSync(path.join(plugin.root, "skills")));
+  if (inTree.length > 0) {
     return inTree;
   }
-  return here;
+
+  return fs.existsSync(path.join(here, "skills"))
+    ? [{ name: path.basename(here), root: here }]
+    : [];
+}
+
+/**
+ * What each plugin contributes, once `--plugin` and `--skill` have had their
+ * say.
+ *
+ * A plugin whose skills are only partly selected is marked incomplete, which
+ * is what withholds its commands.
+ */
+function selected(available, plugins, skills) {
+  return available
+    .filter((plugin) => plugins.length === 0 || plugins.includes(plugin.name))
+    .map((plugin) => {
+      const all = shippedSkills(plugin.root);
+      const wanted =
+        skills.length === 0 ? all : all.filter((name) => skills.includes(name));
+      return {
+        ...plugin,
+        skills: wanted,
+        complete: wanted.length === all.length,
+      };
+    })
+    .filter((plugin) => plugin.skills.length > 0);
+}
+
+/**
+ * Two plugins cannot both call a skill `naming`.
+ *
+ * Every agent here reads one flat skills directory, so the second copy would
+ * overwrite the first and the loser would be whichever sorted earlier. Both
+ * agents would then follow instructions from a plugin they did not install.
+ */
+function refuseCollisions(installs) {
+  const claimed = new Map();
+  for (const install of installs) {
+    for (const skill of install.skills) {
+      const owner = claimed.get(skill);
+      if (owner && owner !== install.name) {
+        throw new Error(
+          `${owner} and ${install.name} both ship a skill called '${skill}', and ` +
+            "these agents read one flat directory. Rename one before installing both.",
+        );
+      }
+      claimed.set(skill, install.name);
+    }
+  }
 }
 
 export function installAgentSkills(options = {}) {
-  const root = options.root ?? defaultRoot(PACKAGE_ROOT);
+  const root = options.root ?? PACKAGE_ROOT;
   const home = options.home ?? os.homedir();
-  const skills = options.skills?.length ? options.skills : shippedSkills(root);
-  const source = path.join(root, "skills");
   const requested = options.targets?.length ? options.targets : DEFAULT_TARGETS;
   const write = !options.check && !options.dryRun;
 
@@ -246,14 +303,41 @@ export function installAgentSkills(options = {}) {
       `unknown agent(s): ${unknown.join(", ")}. Known: ${TARGETS.map(({ agent }) => agent).join(", ")}`,
     );
   }
+
+  const available = shippedPlugins(root);
+  if (available.length === 0) {
+    throw new Error(`no plugins to install under ${root}`);
+  }
+
+  const wantedPlugins = options.plugins ?? [];
+  const missingPlugins = wantedPlugins.filter(
+    (name) => !available.some((plugin) => plugin.name === name),
+  );
+  if (missingPlugins.length > 0) {
+    throw new Error(
+      `unknown plugin(s): ${missingPlugins.join(", ")}. Here: ${available.map(({ name }) => name).join(", ")}`,
+    );
+  }
+
+  const wantedSkills = options.skills ?? [];
+  const installs = selected(available, wantedPlugins, wantedSkills);
+  const skills = [
+    ...new Set(installs.flatMap((install) => install.skills)),
+  ].sort();
+
+  const missingSkills = wantedSkills.filter((name) => !skills.includes(name));
+  if (missingSkills.length > 0) {
+    throw new Error(
+      `no skill to install called ${missingSkills.join(", ")}. Here: ${available
+        .flatMap((plugin) => shippedSkills(plugin.root))
+        .sort()
+        .join(", ")}`,
+    );
+  }
   if (skills.length === 0) {
-    throw new Error(`no skills to install under ${source}`);
+    throw new Error(`no skills to install under ${root}`);
   }
-  for (const skill of skills) {
-    if (!fs.existsSync(path.join(source, skill))) {
-      throw new Error(`no skill to install at ${path.join(source, skill)}`);
-    }
-  }
+  refuseCollisions(installs);
 
   const results = [];
 
@@ -274,7 +358,7 @@ export function installAgentSkills(options = {}) {
       continue;
     }
 
-    const planned = plannedFiles(root, skills, target, agentHome);
+    const planned = plannedFiles(installs, target, agentHome);
     const changed = [...planned]
       .filter(([relative, contents]) => {
         try {
@@ -307,8 +391,10 @@ export function installAgentSkills(options = {}) {
     // this writes into directories it does not own.
     const roots = [
       ...skills.map((skill) => path.join(target.skills, skill)),
-      ...(target.commands && skills.includes(PLUGIN_SKILL)
-        ? [path.join(target.commands, PLUGIN_SKILL)]
+      ...(target.commands
+        ? installs
+            .filter((install) => install.complete)
+            .map((install) => path.join(target.commands, install.name))
         : []),
     ];
     const extra = roots
@@ -329,7 +415,15 @@ export function installAgentSkills(options = {}) {
     });
   }
 
-  return { source, skills, results };
+  return {
+    plugins: installs.map(({ name, root: at, skills: shipped }) => ({
+      name,
+      root: at,
+      skills: shipped,
+    })),
+    skills,
+    results,
+  };
 }
 
 // Run directly, rather than imported by a test.
@@ -340,6 +434,7 @@ if (
   const { values } = parseArgs({
     options: {
       target: { type: "string", multiple: true, short: "t" },
+      plugin: { type: "string", multiple: true, short: "p" },
       skill: { type: "string", multiple: true },
       check: { type: "boolean" },
       "dry-run": { type: "boolean" },
@@ -354,8 +449,11 @@ if (
         `Options:\n` +
         `  -t, --target <agent>  Repeatable. ${TARGETS.map(({ agent }) => agent).join(", ")}\n` +
         `                        (default: ${DEFAULT_TARGETS.join(", ")})\n` +
-        `      --skill <name>    Repeatable. Which skills to install\n` +
-        `                        (default: every directory under skills/)\n` +
+        `  -p, --plugin <name>   Repeatable. Which plugins to install\n` +
+        `                        (default: every plugin in this tree)\n` +
+        `      --skill <name>    Repeatable. Which of their skills to install.\n` +
+        `                        A plugin only gets its commands when all of\n` +
+        `                        its skills are installed\n` +
         `      --check           Report what is missing or stale, and change nothing\n` +
         `      --dry-run         Report what would be written, and change nothing\n` +
         `  -h, --help            Show this\n\n` +
@@ -373,14 +471,19 @@ if (
           .map((name) => name.trim())
           .filter(Boolean),
       );
-    const { source, results } = installAgentSkills({
+    const { plugins, results } = installAgentSkills({
       targets: split(values.target),
+      plugins: split(values.plugin),
       skills: split(values.skill),
       check: values.check,
       dryRun: values["dry-run"],
     });
 
-    process.stdout.write(`Source: ${source}\n`);
+    for (const plugin of plugins) {
+      process.stdout.write(
+        `Source: ${plugin.root}  (${plugin.skills.join(", ")})\n`,
+      );
+    }
     for (const result of results) {
       const detail =
         result.status === "absent"

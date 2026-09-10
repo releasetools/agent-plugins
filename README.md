@@ -24,9 +24,10 @@ codex plugin add mutex@ReleaseTools
 
 ## What is published
 
-| Plugin  | What it does                                                         |
-| ------- | -------------------------------------------------------------------- |
-| `mutex` | Guard a shared resource with a distributed lock, using the mutex CLI |
+| Plugin          | What it does                                                          |
+| --------------- | --------------------------------------------------------------------- |
+| `mutex`         | Guard a shared resource with a distributed lock, using the mutex CLI  |
+| `release-notes` | Draft a release's changelog entry from the commits since the last tag |
 
 The plugins live here: `plugins/<name>/` is the source, not a copy of one, and
 a merge to `main` is the release. See [AGENTS.md](./AGENTS.md) for how to change
