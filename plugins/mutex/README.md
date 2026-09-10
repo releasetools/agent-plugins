@@ -24,6 +24,19 @@ codex plugin marketplace add releasetools/agent-plugins
 codex plugin add mutex@ReleaseTools
 ```
 
+Hermes and Antigravity clone this repository and read `plugin.json`, so they
+install from GitHub with no marketplace to add:
+
+```shell
+hermes plugins install releasetools/agent-plugins/plugins/mutex
+agy plugin install https://github.com/releasetools/agent-plugins
+```
+
+`agy` takes every plugin in the repository. Gemini CLI installs an extension
+only from a repository root, so it takes a copy instead, with
+`node agent-plugins/scripts/install-agent-skills.mjs --plugin mutex` from a
+checkout.
+
 ## What it needs
 
 This plugin runs the `mutex` command; it does not contain it, and installing the

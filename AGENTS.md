@@ -4,19 +4,21 @@ This is where the plugins live. Editing one is an ordinary pull request: change
 the files under `plugins/<name>/`, bump its version, and the merge is the
 release. Nothing is copied in from anywhere else.
 
-Two files are generated and must not be hand-edited: the catalogs.
+Three kinds of file are generated and must not be hand-edited: the two
+catalogs, and each plugin's `plugin.json`.
 
 ## What is here
 
 ```text
 plugins/<name>/                   A plugin. The source, not a copy of one
+plugins/<name>/plugin.json        What every other agent reads  (generated)
 .claude-plugin/marketplace.json   Claude Code's catalog     (generated)
 .agents/plugins/marketplace.json  Codex's catalog           (generated)
 scripts/validate-plugin.mjs       One plugin's own layout
 scripts/validate-marketplaces.mjs What holds between the two catalogs
 scripts/sync-catalogs.mjs         Writes both catalogs from plugins/
 scripts/check-version-bump.mjs    A changed plugin has to say so in its version
-scripts/install-agent-skills.mjs  For the agents that read no manifest
+scripts/install-agent-skills.mjs  Copies skills in, for Gemini
 scripts/catalogs.mjs              What all of those agree on
 __tests__/                        Jest, run by `npm test`
 ```
@@ -64,25 +66,49 @@ Semver is judged from what an agent sees: new commands or skills are a minor,
 wording and fixes are a patch, and removing a command or changing what one does
 is a major.
 
-## The agents that read no manifest
+## The other three agents
 
-Hermes, Gemini and Antigravity discover skills by walking a directory under
-their own home, so `scripts/install-agent-skills.mjs` copies every plugin's
-`skills/` into each of them. It finds the plugins the way the catalogs do, by
-reading `plugins/`, so a new plugin reaches these three on the day it reaches
-the two that read a manifest.
+Claude Code and Codex resolve a plugin through a catalog. Hermes and
+Antigravity clone this repository and read `plugin.json` at the plugin root, so
+both install from GitHub with no copying and no checkout of your own:
+
+```shell
+hermes plugins install releasetools/agent-plugins/plugins/release-notes
+agy plugin install https://github.com/releasetools/agent-plugins
+```
+
+`agy` reads `plugins/` as a bulk directory and takes every plugin in it.
+`hermes` takes one, named by the subdirectory after `owner/repo`.
+
+That `plugin.json` is the [Agent Plugins v1](https://agent-plugins.org) portable
+format, and it carries only the fields that schema names: an unknown field is a
+validation failure there rather than something ignored. It is generated from
+`.claude-plugin/plugin.json` and compared byte for byte by the validator, for
+the reason the catalogs are. A third place to write the version is a third
+place for it to be wrong, and this one is read after a `git clone` rather than
+through a catalog that would have caught it.
+
+Check a change against the tools themselves rather than only against this
+repository's validator. Both accept a directory:
+
+```shell
+hermes plugins doctor plugins/<name>
+agy plugin validate plugins/<name>
+```
+
+Gemini CLI is the one that cannot install from here. Its extensions require
+`gemini-extension.json` at the absolute root of a repository or a release
+archive, and it has no notion of an extension inside a monorepo. Until that is
+settled, `scripts/install-agent-skills.mjs` copies skills and rendered TOML
+commands into `~/.gemini`, namespaced by plugin, so `commands/release-notes/
+draft.toml` is `/release-notes:draft`:
 
 ```shell
 npm run install-skills -- --check              # what is missing or out of date
 npm run install-skills -- --plugin mutex       # one of them
 ```
 
-Gemini also takes commands, as TOML, rendered on the way in and namespaced by
-plugin: `commands/release-notes/draft.toml` is `/release-notes:draft`. A plugin
-gets its commands only when all of its skills are installed, since a menu entry
-naming a helper that was never copied fails at the moment somebody runs it.
-
-That skills directory is flat, so two plugins cannot both ship a skill called
+That directory is flat, so two plugins cannot both ship a skill called
 `naming`. The installer refuses the pair rather than letting one overwrite the
 other, which would leave an agent following instructions from a plugin nobody
 installed.
@@ -137,10 +163,10 @@ what stops it being written in the first place.
 
 The `mutex` npm package carries a copy of `plugins/mutex/skills/` and
 `commands/` at its top level, fetched from here when that release is built, so a
-global install can seed those three agents without a checkout.
-`install-agent-skills.mjs` runs from either home: it reads `plugins/` here, and
-falls back to the top-level `skills/` there, taking the plugin's name from the
-directory the package unpacked into.
+global install can seed Gemini without a checkout. `install-agent-skills.mjs`
+runs from either home: it reads `plugins/` here, and falls back to the top-level
+`skills/` there, taking the plugin's name from the directory the package
+unpacked into.
 
 ## release-notes, and the git it reads
 

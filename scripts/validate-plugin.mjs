@@ -19,6 +19,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import {
+  PORTABLE_MANIFEST,
+  portableManifest,
+  serializeJson,
+} from "./catalogs.mjs";
 
 /**
  * Checks one plugin directory, the way four different agents read it.
@@ -36,7 +41,10 @@ import { parseArgs } from "node:util";
  * - the two manifests drifting to different versions, so what a Codex user
  *   installs is not what a Claude user installs;
  * - a copy of a skill inside a product directory, which is how two agents start
- *   reading different instructions from the same repository.
+ *   reading different instructions from the same repository;
+ * - a portable manifest left behind by an edit to the plugin's own, so the
+ *   agents that clone this repository install a different version from the two
+ *   that read a catalog.
  */
 
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -200,12 +208,41 @@ export function validatePlugin({
     }
   }
 
+  validatePortableManifest(root, claude, errors);
   validateSkills(root, errors);
   validateCommands(root, name, codex, errors);
   validateNoProductCopies(root, errors);
   validateHooks(root, errors);
 
   return { version: versions.codex ?? versions.claude ?? null, errors };
+}
+
+/**
+ * `plugin.json`, which is how every agent that is not Claude Code or Codex
+ * finds the plugin at all.
+ *
+ * Generated from the plugin's own manifest and compared byte for byte, for the
+ * reason the catalogs are: a third place to write the version is a third place
+ * for it to be wrong, and this one is read after a `git clone` rather than
+ * through a catalog that would have caught it.
+ */
+function validatePortableManifest(root, claude, errors) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(root, PORTABLE_MANIFEST), "utf8");
+  } catch {
+    errors.push(`${PORTABLE_MANIFEST} is missing. Run \`npm run sync\`.`);
+    return;
+  }
+  if (!claude) {
+    // Its source could not be read, and that is already an error.
+    return;
+  }
+  if (text !== serializeJson(portableManifest(claude))) {
+    errors.push(
+      `${PORTABLE_MANIFEST} is not what ${CLAUDE_MANIFEST} describes. Run \`npm run sync\`.`,
+    );
+  }
 }
 
 /**

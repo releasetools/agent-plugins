@@ -22,13 +22,17 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 /**
- * Puts the skills where each agent looks for them.
+ * Puts the skills where an agent that cannot install this plugin looks for them.
  *
- * Claude Code and Codex read `skills/` through the manifests in
- * `.claude-plugin/` and `.codex-plugin/`, so they install the plugin rather
- * than a copy and are not touched unless asked for by name. The rest have no
- * manifest to read: they discover skills by walking a directory under their own
- * home, so the directory has to be there.
+ * Four of the five install it properly. Claude Code and Codex resolve it
+ * through a catalog; Hermes and Antigravity clone the repository and read
+ * `plugin.json`. Gemini CLI is the exception: an extension has to sit at the
+ * root of a repository or a release archive, and every plugin here is in a
+ * subdirectory, so a copy is the only way in.
+ *
+ * It still installs for Hermes and Antigravity on request, and the mutex npm
+ * package runs it from its own top level, where a global CLI installation is
+ * the only checkout most people have.
  *
  * Copies rather than symlinks. A symlink into a git worktree turns "I deleted
  * that branch" into "my agent lost a skill", and these directories outlive the

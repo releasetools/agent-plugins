@@ -25,8 +25,10 @@ import {
   CODEX_MANIFEST,
   MARKETPLACE_NAME,
   PLUGINS_DIR,
+  PORTABLE_MANIFEST,
   claudeEntry,
   codexEntry,
+  portableManifest,
   readJson,
   serializeJson,
 } from "./catalogs.mjs";
@@ -38,10 +40,11 @@ import { REPOSITORY_ROOT, validatePlugin } from "./validate-plugin.mjs";
  *     npm run sync           write them
  *     npm run sync -- --check   say whether they are already right
  *
- * The catalogs are the only generated files left here. Each entry is derived
- * from that plugin's own manifests, in that client's schema, so the two clients
- * cannot end up describing different things - which is the failure neither
- * vendor's validator can see, since each reads only its own file.
+ * Three kinds of file are generated: the two catalogs, and each plugin's
+ * `plugin.json`. All of them are derived from that plugin's own manifests, in
+ * the schema the reader expects, so no two agents can end up describing
+ * different things - which is the failure no vendor's validator can see, since
+ * each reads only its own file.
  *
  * A plugin that does not validate gets no entry written at all. A catalog is
  * what a client reads before fetching anything, and listing something broken is
@@ -61,8 +64,15 @@ export function syncCatalogs({ root = REPOSITORY_ROOT, check = false } = {}) {
 
   const errors = [];
   const entries = {};
+  const changed = [];
   for (const name of plugins) {
     const at = path.join(directory, name);
+
+    // Written before the plugin is validated, because the validator requires
+    // it. Generating it there instead would mean a new plugin never validates
+    // and so never gets the file that would let it.
+    writePortable(at, `${PLUGINS_DIR}/${name}`, changed, check);
+
     const failures = validatePlugin({ root: at, name }).errors;
     if (failures.length > 0) {
       errors.push(...failures.map((failure) => `${name}: ${failure}`));
@@ -77,7 +87,6 @@ export function syncCatalogs({ root = REPOSITORY_ROOT, check = false } = {}) {
     return { errors, changed: [], plugins };
   }
 
-  const changed = [];
   for (const [client, relative] of [
     ["claude", CLAUDE_CATALOG],
     ["codex", CODEX_CATALOG],
@@ -114,6 +123,34 @@ export function syncCatalogs({ root = REPOSITORY_ROOT, check = false } = {}) {
   }
 
   return { errors: [], changed, plugins };
+}
+
+/**
+ * Rewrites one plugin's `plugin.json` from its own manifest.
+ *
+ * A manifest that cannot be read is left to the validator, which says which
+ * file and why. Writing a portable manifest from a broken one would publish a
+ * plugin the catalogs refuse to list.
+ */
+function writePortable(at, label, changed, check) {
+  let wanted;
+  try {
+    wanted = serializeJson(
+      portableManifest(readJson(path.join(at, CLAUDE_MANIFEST))),
+    );
+  } catch {
+    return;
+  }
+
+  const file = path.join(at, PORTABLE_MANIFEST);
+  const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
+  if (current === wanted) {
+    return;
+  }
+  changed.push(`${label}/${PORTABLE_MANIFEST}`);
+  if (!check) {
+    fs.writeFileSync(file, wanted);
+  }
 }
 
 // Run directly, rather than imported by a test.

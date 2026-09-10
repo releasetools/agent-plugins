@@ -23,6 +23,8 @@ import { fileURLToPath } from "node:url";
 import * as packaging from "../scripts/validate-plugin.mjs";
 // @ts-expect-error - packaging tooling, deliberately plain JS with no types
 import * as installer from "../scripts/install-agent-skills.mjs";
+// @ts-expect-error - packaging tooling, deliberately plain JS with no types
+import * as catalogs from "../scripts/catalogs.mjs";
 
 const { parseStrictJson, validatePlugin } = packaging;
 const {
@@ -84,6 +86,13 @@ function plugin(overrides: Record<string, unknown> = {}) {
 
   write(".claude-plugin/plugin.json", JSON.stringify(claude));
   write(".codex-plugin/plugin.json", JSON.stringify(codex));
+  if (overrides.portable !== null) {
+    write(
+      "plugin.json",
+      (overrides.portable as string) ??
+        catalogs.serializeJson(catalogs.portableManifest(claude)),
+    );
+  }
   write(
     `skills/${overrides.skillDirectory ?? "mutex"}/SKILL.md`,
     `---\nname: ${overrides.skillName ?? "mutex"}\ndescription: Takes locks\n---\n\n# mutex\n`,
@@ -323,6 +332,55 @@ describe("validatePlugin", () => {
    * Codex requires the interface block, and `category` is also the only place
    * the published Codex catalog entry can get a category from.
    */
+  /**
+   * Hermes and Antigravity clone this repository and look for `plugin.json`
+   * where the plugin starts. Neither reads a catalog, so a stale or missing
+   * one is not caught anywhere downstream: the plugin simply installs at the
+   * wrong version, or is not found at all.
+   */
+  it("catches a plugin that no agent cloning the repository could find", () => {
+    expect(validatePlugin({ root: build({ portable: null }) }).errors).toEqual([
+      expect.stringContaining("plugin.json is missing"),
+    ]);
+  });
+
+  it("catches a portable manifest left behind by a version bump", () => {
+    const stale = catalogs.serializeJson(
+      catalogs.portableManifest({ ...MANIFEST, version: "0.0.9" }),
+    );
+
+    expect(validatePlugin({ root: build({ portable: stale }) }).errors).toEqual(
+      [
+        expect.stringContaining(
+          "plugin.json is not what .claude-plugin/plugin.json describes",
+        ),
+      ],
+    );
+  });
+
+  it("publishes the portable manifest the schema names, and nothing else", () => {
+    const manifest = catalogs.portableManifest({
+      ...MANIFEST,
+      author: { name: "ReleaseTools", url: "https://github.com/releasetools" },
+      license: "Apache-2.0",
+      keywords: ["lock"],
+      // Codex's own fields have no place in a format that rejects what it
+      // does not know.
+      skills: "./skills/",
+      interface: { displayName: "mutex" },
+    });
+
+    expect(manifest).toEqual({
+      $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+      name: "mutex",
+      version: "0.1.0",
+      description: "Guard a shared resource with a distributed lock",
+      author: { name: "ReleaseTools", url: "https://github.com/releasetools" },
+      license: "Apache-2.0",
+      keywords: ["lock"],
+    });
+  });
+
   it("catches a Codex manifest with nothing to display", () => {
     expect(
       validatePlugin({ root: build({ face: { category: "" } }) }).errors,

@@ -22,6 +22,30 @@ codex plugin marketplace add releasetools/agent-plugins
 codex plugin add mutex@ReleaseTools
 ```
 
+## Hermes and Antigravity
+
+Both clone this repository and read `plugin.json` at the plugin root, so
+neither needs a marketplace or a checkout of your own. `agy` takes every plugin
+in `plugins/`; `hermes` takes the one the subdirectory names.
+
+```shell
+agy plugin install https://github.com/releasetools/agent-plugins
+hermes plugins install releasetools/agent-plugins/plugins/release-notes
+```
+
+## Gemini and Antigravity's IDE
+
+Gemini CLI installs an extension only from the root of a repository, and every
+plugin here lives in a subdirectory, so it takes a copy instead:
+
+```shell
+git clone https://github.com/releasetools/agent-plugins
+node agent-plugins/scripts/install-agent-skills.mjs
+```
+
+`--check` reports what is missing or out of date and writes nothing.
+`--plugin <name>` installs one.
+
 ## What is published
 
 | Plugin          | What it does                                                          |

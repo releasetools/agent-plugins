@@ -27,6 +27,19 @@ codex plugin marketplace add releasetools/agent-plugins
 codex plugin add release-notes@ReleaseTools
 ```
 
+Hermes and Antigravity clone this repository and read `plugin.json`, so they
+install from GitHub with no marketplace to add:
+
+```shell
+hermes plugins install releasetools/agent-plugins/plugins/release-notes
+agy plugin install https://github.com/releasetools/agent-plugins
+```
+
+`agy` takes every plugin in the repository. Gemini CLI installs an extension
+only from a repository root, so it takes a copy instead, with
+`node agent-plugins/scripts/install-agent-skills.mjs --plugin release-notes` from a
+checkout.
+
 ## What it needs
 
 `git`, and a repository with commits. `gh` is optional: `--pr` fetches the pull

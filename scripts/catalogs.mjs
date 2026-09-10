@@ -42,6 +42,19 @@ export const PLUGINS_DIR = "plugins";
 export const CLAUDE_MANIFEST = ".claude-plugin/plugin.json";
 export const CODEX_MANIFEST = ".codex-plugin/plugin.json";
 
+/**
+ * The manifest every other agent reads, at the plugin root.
+ *
+ * Claude Code and Codex each look inside a directory of their own. Hermes and
+ * Antigravity look for `plugin.json` where the plugin starts, and both accept
+ * the same portable format, so one file serves both rather than one file each.
+ */
+export const PORTABLE_MANIFEST = "plugin.json";
+
+/** The version of that format this marketplace publishes. */
+export const PORTABLE_SCHEMA =
+  "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
+
 /** Strict X.Y.Z. No prereleases: a marketplace has nowhere to show one. */
 export const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
@@ -97,6 +110,29 @@ export function codexEntry(manifest) {
     policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
     category: manifest.interface.category,
   };
+}
+
+/**
+ * The plugin as an agent reads it after cloning the repository.
+ *
+ * Only the fields the portable schema names: an unknown one is a validation
+ * failure there rather than something ignored, which is why this is generated
+ * from the plugin's own manifest instead of being a third place to edit.
+ * `${PLUGIN_ROOT}` and an `extensions` block exist in that format and nothing
+ * here needs either.
+ */
+export function portableManifest(manifest) {
+  return withoutUndefined({
+    $schema: PORTABLE_SCHEMA,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    author: manifest.author,
+    homepage: manifest.homepage,
+    repository: manifest.repository,
+    license: manifest.license,
+    keywords: manifest.keywords,
+  });
 }
 
 function withoutUndefined(entry) {
