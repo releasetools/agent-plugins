@@ -13,8 +13,8 @@ expected - the skill covers the decisions, this covers the details.
   be searched for.
 - **Everywhere else** it is `agent-lock.mjs` in the same directory as this
   file - the skill directory the agent loaded, which is
-  `~/.hermes/skills/devops/mutex/`, `~/.gemini/skills/mutex/`, or a plugin
-  cache under `~/.codex/plugins/`.
+  `~/.hermes/plugins/mutex/skills/mutex/`, `~/.gemini/config/plugins/mutex/skills/mutex/`,
+  or a plugin cache under `~/.codex/plugins/`.
 - A globally installed CLI carries a copy at
   `$(npm root -g)/@releasetools/mutex/skills/mutex/agent-lock.mjs`.
 

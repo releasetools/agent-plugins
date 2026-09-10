@@ -445,7 +445,9 @@ describe("taking, extending and handing back", () => {
             id: "staging",
             owner: "alice",
             reason: "deploying",
-            expiresAt: new Date(Date.now() + 600 * 1000).toISOString(),
+            // Half a minute clear of the boundary: at exactly 600s the
+            // renderer floors to 9m as soon as any time has passed.
+            expiresAt: new Date(Date.now() + 630 * 1000).toISOString(),
           },
         }),
       },

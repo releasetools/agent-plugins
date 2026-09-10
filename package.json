@@ -15,7 +15,6 @@
     "test": "npm run typecheck && NODE_OPTIONS=--experimental-vm-modules jest",
     "validate": "node scripts/validate-plugin.mjs && node scripts/validate-marketplaces.mjs",
     "sync": "node scripts/sync-catalogs.mjs",
-    "install-skills": "node scripts/install-agent-skills.mjs",
     "check": "npm run lint && npm test && npm run validate"
   },
   "engines": {

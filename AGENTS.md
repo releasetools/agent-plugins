@@ -18,7 +18,6 @@ scripts/validate-plugin.mjs       One plugin's own layout
 scripts/validate-marketplaces.mjs What holds between the two catalogs
 scripts/sync-catalogs.mjs         Writes both catalogs from plugins/
 scripts/check-version-bump.mjs    A changed plugin has to say so in its version
-scripts/install-agent-skills.mjs  Copies skills in, for Gemini
 scripts/catalogs.mjs              What all of those agree on
 __tests__/                        Jest, run by `npm test`
 ```
@@ -66,7 +65,7 @@ Semver is judged from what an agent sees: new commands or skills are a minor,
 wording and fixes are a patch, and removing a command or changing what one does
 is a major.
 
-## The other three agents
+## The other two agents
 
 Claude Code and Codex resolve a plugin through a catalog. Hermes and
 Antigravity clone this repository and read `plugin.json` at the plugin root, so
@@ -96,28 +95,10 @@ hermes plugins doctor plugins/<name>
 agy plugin validate plugins/<name>
 ```
 
-Gemini CLI is the one that cannot install from here, and is also the one on its
-way out: Google retired it for individual accounts on 18 June 2026 in favour of
-Antigravity CLI, and it now reaches only the Gemini Code Assist licences and API
-keys that still serve it. Its extensions require `gemini-extension.json` at the
-absolute root of a repository or a release archive, and it has no notion of an
-extension inside a monorepo, so `scripts/install-agent-skills.mjs` copies skills
-and rendered TOML commands into `~/.gemini` instead, namespaced by plugin, so
-`commands/release-notes/draft.toml` is `/release-notes:draft`:
-
-```shell
-npm run install-skills -- --check              # what is missing or out of date
-npm run install-skills -- --plugin mutex       # one of them
-```
-
-That directory is flat, so two plugins cannot both ship a skill called
-`naming`. The installer refuses the pair rather than letting one overwrite the
-other, which would leave an agent following instructions from a plugin nobody
-installed.
-
-Antigravity does not read what that writes. It looks in `~/.gemini/config/skills`
-and its own plugin directory, so `agy plugin install` is its only route here and
-the copy is Gemini CLI's alone.
+Nothing here copies files into an agent's home. Every agent this marketplace
+serves installs the plugin, so `enable`, `update` and `uninstall` mean
+something, and a plugin nobody installed cannot be sitting in a directory
+looking as though somebody did.
 
 ## mutex, and the CLI it drives
 
@@ -166,13 +147,6 @@ while the newest published CLI was 1.3.1, which answered
 at 0.1.0 and the CLI at 1.4.0 - so nobody ran into it. The contract suite covers
 that flag now, but it would have found this after the fact; the rule above is
 what stops it being written in the first place.
-
-The `mutex` npm package carries a copy of `plugins/mutex/skills/` and
-`commands/` at its top level, fetched from here when that release is built, so a
-global install can seed Gemini without a checkout. `install-agent-skills.mjs`
-runs from either home: it reads `plugins/` here, and falls back to the top-level
-`skills/` there, taking the plugin's name from the directory the package
-unpacked into.
 
 ## release-notes, and the git it reads
 

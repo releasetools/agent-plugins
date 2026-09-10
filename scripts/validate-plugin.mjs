@@ -28,9 +28,9 @@ import {
 /**
  * Checks one plugin directory, the way four different agents read it.
  *
- * `skills/` is the plugin: Claude Code and Codex each find it through their own
- * manifest, and Hermes, Gemini and Antigravity get a copy of the same
- * directory. None of these tools complains loudly when the layout is wrong - a
+ * `skills/` is the plugin: Claude Code and Codex find it through a manifest of
+ * their own, Hermes and Antigravity through `plugin.json` at the root. None of
+ * these tools complains loudly when the layout is wrong - a
  * plugin with a mistyped skill path simply never offers the skill, which looks
  * exactly like the model deciding not to use it.
  *
