@@ -136,6 +136,11 @@ The six from Keep a Changelog, as `###` headings, and only the ones with
 something under them: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`,
 `Security`. A release with two entries needs no headings at all.
 
+Read the existing `CHANGELOG.md` first and follow what it already does. A
+repository that closes each release with a `### Choices` section, naming what
+was chosen and what the alternative failed to do, gets one here too. One whose
+entries are plain categories gets no heading invented for it.
+
 **A breaking change goes first**, under `Changed` or `Removed`, and says what
 to do instead. It is the one thing a reader is scanning for, and burying it
 is how somebody upgrades into it.
