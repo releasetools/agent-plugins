@@ -9,7 +9,7 @@
       "name": "mutex",
       "source": "./plugins/mutex",
       "description": "Guard a shared resource with a distributed lock, using the mutex CLI",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": {
         "name": "ReleaseTools",
         "url": "https://github.com/releasetools"
@@ -31,7 +31,7 @@
       "name": "release-notes",
       "source": "./plugins/release-notes",
       "description": "Draft a release's changelog entry from the commits since the last tag",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "ReleaseTools",
         "url": "https://github.com/releasetools"
