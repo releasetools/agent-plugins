@@ -321,3 +321,92 @@ describe("versions and headings", () => {
     ).toBe("# Changelog\n\n## 0.1.0 - 2026-01-01\n\nIt runs.\n");
   });
 });
+
+describe("one subtree at a time", () => {
+  function monorepo(): string {
+    const root = repository();
+    commit(root, "Both", {
+      "plugins/one/README.md": "one\n",
+      "plugins/two/README.md": "two\n",
+    });
+    commit(root, "Only one", { "plugins/one/SKILL.md": "one\n" });
+    commit(root, "Only two", { "plugins/two/SKILL.md": "two\n" });
+    return root;
+  }
+
+  it("counts only the commits that touched it", () => {
+    const root = monorepo();
+
+    const scope = json(root, ["commits", "--path", "plugins/one"]);
+
+    expect(scope.path).toBe("plugins/one");
+    expect(
+      scope.commits.map((entry: { subject: string }) => entry.subject),
+    ).toEqual(["Both", "Only one"]);
+  });
+
+  it("puts the entry in the subtree's changelog, not the repository's", () => {
+    const root = monorepo();
+    fs.writeFileSync(
+      scratchPath(root, "plugins/one"),
+      "The one plugin refuses an empty vault.\n",
+    );
+
+    const result = run(root, ["write", "0.1.0", "--path", "plugins/one"]);
+
+    expect(result.code).toBe(0);
+    expect(
+      fs.readFileSync(path.join(root, "plugins/one/CHANGELOG.md"), "utf8"),
+    ).toContain("## 0.1.0 - ");
+    expect(fs.existsSync(path.join(root, "CHANGELOG.md"))).toBe(false);
+  });
+
+  it("gives the subtree its own scratch file, so two drafts can be in flight", () => {
+    const root = monorepo();
+
+    expect(scratchPath(root, "plugins/one")).not.toBe(scratchPath(root));
+    expect(scratchPath(root, "plugins/one")).toMatch(
+      /RELEASE_EDITMSG-plugins-one$/,
+    );
+  });
+
+  it("clears only its own scratch file", () => {
+    const root = monorepo();
+    fs.writeFileSync(scratchPath(root), "the repository's draft\n");
+    fs.writeFileSync(scratchPath(root, "plugins/one"), "stale\n");
+
+    json(root, ["commits", "--path", "plugins/one"]);
+
+    expect(fs.readFileSync(scratchPath(root), "utf8")).toBe(
+      "the repository's draft\n",
+    );
+    expect(fs.readFileSync(scratchPath(root, "plugins/one"), "utf8")).toBe("");
+  });
+
+  it("reads the repository root as no subtree at all", () => {
+    const root = monorepo();
+
+    const scope = json(root, ["commits", "--path", "."]);
+
+    expect(scope.path).toBeNull();
+    expect(scope.commits).toHaveLength(3);
+  });
+
+  it("refuses a path outside the repository", () => {
+    const root = monorepo();
+
+    const result = run(root, ["commits", "--path", os.tmpdir()]);
+
+    expect(result.code).toBe(2);
+    expect(result.err).toContain("outside the repository");
+  });
+
+  it("refuses a path that is not there", () => {
+    const root = monorepo();
+
+    const result = run(root, ["commits", "--path", "plugins/three"]);
+
+    expect(result.code).toBe(2);
+    expect(result.err).toContain("is not there");
+  });
+});

@@ -47,10 +47,27 @@ pull request body.
 
 ## Commands
 
-| Command                          |                                            |
-| -------------------------------- | ------------------------------------------ |
-| `/release-notes:draft <version>` | Rule on every commit, then write the entry |
-| `/release-notes:help`            | What the plugin does, and what it will not |
+| Command                                         |                                            |
+| ----------------------------------------------- | ------------------------------------------ |
+| `/release-notes:draft <version> [--path <dir>]` | Rule on every commit, then write the entry |
+| `/release-notes:help`                           | What the plugin does, and what it will not |
+
+## One subtree, or the whole repository
+
+`--path <dir>` releases a subtree: a plugin in a monorepo, a package in a
+workspace. The range covers only the commits that touched it, the entry lands
+in `<dir>/CHANGELOG.md`, and the scratch file is that subtree's own, so a
+subtree draft and a repository draft can be in flight at once. A subtree is
+usually versioned on its own rather than tagged, so pass `--since` with it.
+
+```shell
+/release-notes:draft 0.3.0 --path plugins/release-notes
+```
+
+A repository can keep both kinds: one changelog per released thing, and one
+for itself. They are drafted separately and nothing reconciles them, so the
+repository's entry can summarise what the subtree entries said or say
+something none of them did.
 
 ## The two files it writes
 
