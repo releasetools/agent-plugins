@@ -198,7 +198,7 @@ describe("syncCatalogs", () => {
     roots.push(root);
     plugin(root, "mutex", {});
 
-    expect(syncCatalogs({ root }).errors[0]).toContain("not 'ReleaseTools'");
+    expect(syncCatalogs({ root }).errors[0]).toContain("not 'release-tools'");
   });
 
   it("writes the JSON a formatter would leave alone", () => {

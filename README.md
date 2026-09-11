@@ -9,7 +9,7 @@ Add the marketplace once. Everything after that is installing plugins from it.
 
 ```shell
 claude plugin marketplace add releasetools/agent-plugins
-claude plugin install mutex@ReleaseTools
+claude plugin install mutex@release-tools
 ```
 
 Both steps work as `/plugin marketplace add` and `/plugin install` inside a
@@ -19,7 +19,7 @@ session.
 
 ```shell
 codex plugin marketplace add releasetools/agent-plugins
-codex plugin add mutex@ReleaseTools
+codex plugin add mutex@release-tools
 ```
 
 ## Hermes and Antigravity
@@ -67,8 +67,8 @@ Claude Code:
 ```shell
 claude plugin marketplace list      # which marketplaces are configured
 claude plugin list                  # what is installed, and at which version
-claude plugin marketplace update ReleaseTools
-claude plugin update mutex@ReleaseTools
+claude plugin marketplace update release-tools
+claude plugin update mutex@release-tools
 ```
 
 Codex:
@@ -77,7 +77,7 @@ Codex:
 codex plugin marketplace list
 codex plugin list
 codex plugin marketplace upgrade    # refresh the marketplace snapshot first
-codex plugin add mutex@ReleaseTools # then install the version it now offers
+codex plugin add mutex@release-tools # then install the version it now offers
 ```
 
 Codex reads a snapshot of this repository, so a plugin update arrives only after
@@ -86,13 +86,13 @@ the marketplace itself is refreshed.
 ## Removing it
 
 ```shell
-claude plugin uninstall mutex@ReleaseTools
-claude plugin marketplace remove ReleaseTools
+claude plugin uninstall mutex@release-tools
+claude plugin marketplace remove release-tools
 ```
 
 ```shell
-codex plugin remove mutex@ReleaseTools
-codex plugin marketplace remove ReleaseTools
+codex plugin remove mutex@release-tools
+codex plugin marketplace remove release-tools
 ```
 
 ## Which clients this is tested with

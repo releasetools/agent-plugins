@@ -51,13 +51,13 @@ export function readJson(root, relative) {
 export function marketplace(overrides = {}) {
   const root = temporary("marketplace");
   writeJson(root, ".claude-plugin/marketplace.json", {
-    name: overrides.name ?? "ReleaseTools",
+    name: overrides.name ?? "release-tools",
     owner: { name: "ReleaseTools" },
     description: "Official ReleaseTools plugins for coding agents",
     plugins: [],
   });
   writeJson(root, ".agents/plugins/marketplace.json", {
-    name: overrides.name ?? "ReleaseTools",
+    name: overrides.name ?? "release-tools",
     interface: { displayName: "ReleaseTools" },
     plugins: [],
   });
