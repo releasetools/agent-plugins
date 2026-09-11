@@ -59,6 +59,17 @@ It prints the previous tag, the range, and a row per commit. When
 history, and the entry describes what the software does rather than what
 changed in it.
 
+Add `--path <dir>` when the thing being released is a subtree rather than the
+repository: a plugin in a monorepo, a package in a workspace. The range then
+covers only the commits that touched it, the entry lands in
+`<dir>/CHANGELOG.md`, and the scratch file is its own. A subtree is usually
+versioned on its own rather than tagged, so pass `--since` with it.
+
+A repository can keep both: one changelog per released thing and another for
+itself. They are drafted separately and nothing reconciles them. The
+repository's entry can summarise what four subtree entries said, or say
+something none of them did.
+
 **Pass 2, rule on each commit.** One call per commit:
 
 ```bash
@@ -108,7 +119,8 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/release-notes/agent-notes.mjs" write <version
 That puts it in `CHANGELOG.md` under `## <version> - <date>`, above every
 older release and below the preamble, and leaves the same bytes in the
 scratch file for whatever publishes the release. It refuses a version the
-changelog already carries.
+changelog already carries. Pass the same `--path` you passed to `commits`, or
+the entry lands in the wrong file.
 
 ## The shape of an entry
 

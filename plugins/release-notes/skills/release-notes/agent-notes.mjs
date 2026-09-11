@@ -132,12 +132,46 @@ export function repositoryRoot(cwd) {
 }
 
 /** The scratch file's path, absolute in a main worktree and a linked one alike. */
-export function scratchPath(cwd) {
+export function scratchPath(cwd, subtree = null) {
+  const name = subtree
+    ? `${SCRATCH_FILENAME}-${subtree.replace(/\//g, "-")}`
+    : SCRATCH_FILENAME;
   const found = git(
-    ["rev-parse", "--path-format=absolute", "--git-path", SCRATCH_FILENAME],
+    ["rev-parse", "--path-format=absolute", "--git-path", name],
     { cwd },
   );
   return found.trim();
+}
+
+/**
+ * The subtree a draft covers, repository-relative, or null for the whole
+ * repository.
+ *
+ * A repository can keep one changelog per released thing and another for
+ * itself. They are drafted separately and nothing reconciles them: a monorepo
+ * entry can summarise what four plugin entries said, or say something none of
+ * them did.
+ */
+export function readSubtree(value, cwd) {
+  if (value === undefined) {
+    return null;
+  }
+  const root = repositoryRoot(cwd);
+  const absolute = path.resolve(cwd, value);
+  const relative = path.relative(root, absolute).split(path.sep).join("/");
+  if (relative === "") {
+    return null;
+  }
+  if (relative.startsWith("..")) {
+    throw new HelperError(
+      `--path '${value}' is outside the repository`,
+      EXIT_USAGE,
+    );
+  }
+  if (!fs.existsSync(absolute)) {
+    throw new HelperError(`--path '${value}' is not there`, EXIT_USAGE);
+  }
+  return relative;
 }
 
 /** The most recent tag reachable from HEAD, or null on a repository with none. */
@@ -157,7 +191,7 @@ export function previousTag(cwd) {
  * merge workflow its body is usually the pull request description, which is
  * why it is listed rather than filtered out.
  */
-export function commitsInRange(cwd, range) {
+export function commitsInRange(cwd, range, subtree = null) {
   const log = git(
     [
       "log",
@@ -165,6 +199,7 @@ export function commitsInRange(cwd, range) {
       `--format=${RECORD}%h${FIELD}%p${FIELD}%s`,
       "--numstat",
       range,
+      ...(subtree ? ["--", subtree] : []),
     ],
     { cwd },
   );
@@ -351,13 +386,13 @@ export function insertSection(text, heading, body) {
 // ---------------------------------------------------------------------------
 
 function commandCommits(shared) {
-  const { cwd, since, stdout } = shared;
+  const { cwd, since, subtree, stdout } = shared;
   const tag = since ?? previousTag(cwd);
   const range = tag ? `${tag}..HEAD` : "HEAD";
 
   // Before anything is read, so a run that dies in the middle of the ruling
   // cannot leave the previous release's body for something else to publish.
-  const scratch = scratchPath(cwd);
+  const scratch = scratchPath(cwd, subtree);
   fs.writeFileSync(scratch, "");
 
   write(
@@ -366,11 +401,16 @@ function commandCommits(shared) {
       {
         previousTag: tag,
         range,
+        path: subtree,
         firstRelease: tag === null,
-        changelog: path.join(repositoryRoot(cwd), CHANGELOG_FILENAME),
+        changelog: path.join(
+          repositoryRoot(cwd),
+          subtree ?? "",
+          CHANGELOG_FILENAME,
+        ),
         scratchFile: scratch,
         scratchFileCleared: true,
-        commits: commitsInRange(cwd, range),
+        commits: commitsInRange(cwd, range, subtree),
       },
       null,
       2,
@@ -396,11 +436,11 @@ function commandEvidence(sha, shared) {
 }
 
 function commandWrite(argument, shared) {
-  const { cwd, stdout } = shared;
+  const { cwd, subtree, stdout } = shared;
   const version = readVersion(argument);
   const root = repositoryRoot(cwd);
 
-  const scratch = scratchPath(cwd);
+  const scratch = scratchPath(cwd, subtree);
   let body;
   try {
     body = fs.readFileSync(scratch, "utf8").trim();
@@ -414,11 +454,12 @@ function commandWrite(argument, shared) {
     );
   }
 
-  const file = path.join(root, CHANGELOG_FILENAME);
+  const file = path.join(root, subtree ?? "", CHANGELOG_FILENAME);
+  const shown = path.relative(root, file);
   const existing = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
   if (existing !== null && changelogVersions(existing).includes(version)) {
     throw new HelperError(
-      `${CHANGELOG_FILENAME} already has a section for ${version}. Edit it there, or release the next version.`,
+      `${shown} already has a section for ${version}. Edit it there, or release the next version.`,
     );
   }
 
@@ -428,7 +469,7 @@ function commandWrite(argument, shared) {
   // cannot differ by a stray blank line.
   fs.writeFileSync(scratch, `${body}\n`);
 
-  write(stdout, `${CHANGELOG_FILENAME} now opens with ${version} - ${date}`);
+  write(stdout, `${shown} now opens with ${version} - ${date}`);
   write(stdout, `The release body is in ${scratch}`);
   return EXIT_OK;
 }
@@ -458,6 +499,13 @@ export function usage(invocation = "agent-notes.mjs") {
       Reads the body from the scratch file, puts it in CHANGELOG.md under
       '## <version> - <date>' above every older release, and normalises the
       scratch file to the same bytes.
+
+  --path <dir>
+      On 'commits' and 'write': draft for one subtree instead of the whole
+      repository. The range covers only commits touching it, the entry lands
+      in <dir>/CHANGELOG.md, and the scratch file is its own, so a subtree
+      draft and a repository draft can be in flight at once. A subtree is
+      usually versioned on its own rather than tagged, so pass --since too.
 `;
 }
 
@@ -472,6 +520,7 @@ export function main(argv, options = {}) {
       args: argv,
       options: {
         since: { type: "string" },
+        path: { type: "string" },
         pr: { type: "boolean" },
         help: { type: "boolean", short: "h" },
       },
@@ -493,12 +542,14 @@ export function main(argv, options = {}) {
   const shared = {
     cwd: options.cwd ?? process.cwd(),
     since: values.since?.trim() || undefined,
+    subtree: null,
     pr: values.pr === true,
     stdout,
     stderr,
   };
 
   try {
+    shared.subtree = readSubtree(values.path?.trim() || undefined, shared.cwd);
     switch (command) {
       case "commits":
         return commandCommits(shared);
