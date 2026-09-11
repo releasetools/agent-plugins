@@ -208,11 +208,11 @@ describe("validateMarketplaces", () => {
   it("catches a marketplace renamed out from under its users", () => {
     const root = published();
     const claude = readJson(root, CLAUDE);
-    claude.name = "ReleaseTools-plugins";
+    claude.name = "release-tools-plugins";
     writeJson(root, CLAUDE, claude);
 
     expect(failure(root)).toMatch(
-      /names the marketplace 'ReleaseTools-plugins'/,
+      /names the marketplace 'release-tools-plugins'/,
     );
   });
 

@@ -1,5 +1,5 @@
 {
-  "name": "ReleaseTools",
+  "name": "release-tools",
   "interface": {
     "displayName": "ReleaseTools"
   },

@@ -1,6 +1,6 @@
 {
   "name": "release-notes",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Draft a release's changelog entry from the commits since the last tag",
   "author": {
     "name": "ReleaseTools",

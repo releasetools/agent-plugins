@@ -14,14 +14,14 @@ Claude Code:
 
 ```shell
 claude plugin marketplace add releasetools/agent-plugins
-claude plugin install mutex@ReleaseTools
+claude plugin install mutex@release-tools
 ```
 
 Codex:
 
 ```shell
 codex plugin marketplace add releasetools/agent-plugins
-codex plugin add mutex@ReleaseTools
+codex plugin add mutex@release-tools
 ```
 
 Hermes and Antigravity clone this repository and read `plugin.json`, so they
