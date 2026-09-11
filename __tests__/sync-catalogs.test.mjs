@@ -21,9 +21,10 @@ import { syncCatalogs } from "../scripts/sync-catalogs.mjs";
 import { marketplace, plugin, readJson, writeJson } from "./fixtures.mjs";
 
 /**
- * The catalogs are the only generated files left. What matters is that both
- * describe the same inventory, that each entry is derived rather than typed,
- * and that a plugin arriving does not disturb one that was already there.
+ * The catalogs and each plugin's `plugin.json` are the generated files. What
+ * matters is that they describe the same inventory at the same versions, that
+ * every entry is derived rather than typed, and that a plugin arriving does
+ * not disturb one that was already there.
  */
 
 const CLAUDE = ".claude-plugin/marketplace.json";
@@ -46,6 +47,41 @@ describe("syncCatalogs", () => {
     for (const root of roots.splice(0)) {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  /**
+   * Written before the plugin is validated, because the validator requires it.
+   * A plugin added by hand has no `plugin.json` until this runs, and a
+   * validator that refused it first would leave no way to produce one.
+   */
+  it("writes the manifest for a plugin that arrived without one", () => {
+    const root = build(["mutex", { version: "0.1.0" }]);
+    fs.rmSync(path.join(root, "plugins", "mutex", "plugin.json"));
+
+    const { errors, changed } = syncCatalogs({ root });
+
+    expect(errors).toEqual([]);
+    expect(changed).toContain("plugins/mutex/plugin.json");
+    expect(readJson(root, "plugins/mutex/plugin.json")).toMatchObject({
+      $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+      name: "mutex",
+      version: "0.1.0",
+    });
+  });
+
+  it("rewrites the manifest a version bump left behind", () => {
+    const root = build(["mutex", { version: "0.1.0" }]);
+    for (const at of [
+      "plugins/mutex/.claude-plugin/plugin.json",
+      "plugins/mutex/.codex-plugin/plugin.json",
+    ]) {
+      writeJson(root, at, { ...readJson(root, at), version: "0.2.0" });
+    }
+
+    expect(syncCatalogs({ root }).changed).toContain(
+      "plugins/mutex/plugin.json",
+    );
+    expect(readJson(root, "plugins/mutex/plugin.json").version).toBe("0.2.0");
   });
 
   it("writes both catalogs from the plugins that are there", () => {

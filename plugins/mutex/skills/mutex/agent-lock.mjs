@@ -202,7 +202,6 @@ export function detectAgent(env = process.env) {
     ["CODEX", "codex"],
     ["HERMES", "hermes"],
     ["ANTIGRAVITY", "antigravity"],
-    ["GEMINI", "gemini"],
   ];
   const keys = Object.keys(env);
   for (const [prefix, name] of prefixes) {
@@ -222,12 +221,18 @@ export function detectAgent(env = process.env) {
  * environment; the names differ, so the ones that are known are named and
  * anything else is found by shape. `MUTEX_SESSION_ID` is the way out for a
  * tool that does neither.
+ *
+ * The shape has to allow `CONVERSATION` as well as `SESSION` and `THREAD`,
+ * because Antigravity calls its id `ANTIGRAVITY_CONVERSATION_ID`. Without it
+ * an owner there is agent and host alone, which is every session on that
+ * machine sharing one name and able to release each other's locks.
  */
 const SESSION_VARIABLES = [
   "MUTEX_SESSION_ID",
   "CLAUDE_CODE_SESSION_ID",
   "CODEX_THREAD_ID",
   "HERMES_SESSION_ID",
+  "ANTIGRAVITY_CONVERSATION_ID",
 ];
 
 export function sessionId(env = process.env) {
@@ -242,7 +247,7 @@ export function sessionId(env = process.env) {
   // its own that is shaped like one.
   for (const name of Object.keys(env).sort()) {
     if (
-      /^(CLAUDE|CODEX|HERMES|GEMINI|ANTIGRAVITY)_.*(SESSION|THREAD).*ID$/.test(
+      /^(CLAUDE|CODEX|HERMES|ANTIGRAVITY)_.*(SESSION|THREAD|CONVERSATION).*ID$/.test(
         name,
       )
     ) {
@@ -1707,7 +1712,7 @@ export function commandPreflight(options = {}) {
         ? " (from $MUTEX_OWNER)"
         : report.session
           ? ""
-          : " - no session id in the environment, so every session on this machine shares this name and can release its locks"
+          : " - no session id in the environment, so every session on this machine shares this name and can release its locks. Export $MUTEX_SESSION_ID to give this one a name of its own"
     }`,
   ];
   if (report.locks !== null && report.locks !== undefined) {

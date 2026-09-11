@@ -24,6 +24,17 @@ codex plugin marketplace add releasetools/agent-plugins
 codex plugin add mutex@ReleaseTools
 ```
 
+Hermes and Antigravity clone this repository and read `plugin.json`, so they
+install from GitHub with no marketplace to add:
+
+```shell
+hermes plugins install releasetools/agent-plugins/plugins/mutex
+agy plugin install https://github.com/releasetools/agent-plugins
+```
+
+`agy` takes every plugin in the repository. `hermes` takes the one its
+subdirectory names.
+
 ## What it needs
 
 This plugin runs the `mutex` command; it does not contain it, and installing the
@@ -79,6 +90,17 @@ Locks are taken under a name that says who holds them - the agent, the host and
 the session, as in `claude@workstation:22ca1fea-…` - so `mutex list` names the
 conversation rather than a random string, and one session cannot release
 another's lock.
+
+Three variables change that name, and the first is the one that matters:
+
+| Variable           |                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MUTEX_SESSION_ID` | Names this session, for an agent that publishes no id of its own. Without one, every session on the machine shares a name and can release the others' locks |
+| `MUTEX_AGENT_NAME` | Renames the agent half, for an agent this plugin does not recognise                                                                                         |
+| `MUTEX_OWNER`      | Replaces the whole name. The CLI's own variable, and it wins over both of the above                                                                         |
+
+`/mutex:preflight` prints the name locks will be taken under, and says when it
+is one every session on the machine shares.
 
 What was taken is written to
 `${XDG_STATE_HOME:-$HOME/.local/state}/releasetools-mutex/agent-locks.json`, and

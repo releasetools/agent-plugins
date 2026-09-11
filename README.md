@@ -22,6 +22,17 @@ codex plugin marketplace add releasetools/agent-plugins
 codex plugin add mutex@ReleaseTools
 ```
 
+## Hermes and Antigravity
+
+Both clone this repository and read `plugin.json` at the plugin root, so
+neither needs a marketplace or a checkout of your own. `agy` takes every plugin
+in `plugins/`; `hermes` takes the one the subdirectory names.
+
+```shell
+agy plugin install https://github.com/releasetools/agent-plugins
+hermes plugins install releasetools/agent-plugins/plugins/release-notes
+```
+
 ## What is published
 
 | Plugin          | What it does                                                          |

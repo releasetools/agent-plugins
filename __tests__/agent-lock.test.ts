@@ -216,7 +216,9 @@ describe("who the lock belongs to", () => {
     expect(sessionId({ CLAUDE_CODE_SESSION_ID: "c1" })).toBe("c1");
     expect(sessionId({ CODEX_THREAD_ID: "t1" })).toBe("t1");
     expect(sessionId({ HERMES_SESSION_ID: "h1" })).toBe("h1");
-    expect(sessionId({ GEMINI_CONVERSATION_SESSION_ID: "g1" })).toBe("g1");
+    expect(sessionId({ ANTIGRAVITY_CONVERSATION_ID: "a1" })).toBe("a1");
+    // Found by shape rather than by name, which is what the fallback is for.
+    expect(sessionId({ ANTIGRAVITY_AGENT_CONVERSATION_ID: "a2" })).toBe("a2");
     expect(sessionId({ MUTEX_SESSION_ID: "mine", CODEX_THREAD_ID: "t1" })).toBe(
       "mine",
     );
@@ -226,6 +228,11 @@ describe("who the lock belongs to", () => {
   it("names the agent it is running inside, and falls back quietly", () => {
     expect(detectAgent({ CODEX_SANDBOX: "seatbelt" })).toBe("codex");
     expect(detectAgent({ HERMES_SESSION: "1" })).toBe("hermes");
+    expect(detectAgent({ ANTIGRAVITY_CONVERSATION_ID: "a1" })).toBe(
+      "antigravity",
+    );
+    // An API key is a credential, not a session. Nothing should read it as one.
+    expect(detectAgent({ GEMINI_API_KEY: "secret" })).toBe("agent");
     expect(detectAgent({ MUTEX_AGENT_NAME: "bespoke" })).toBe("bespoke");
     expect(detectAgent({ PATH: "/usr/bin" })).toBe("agent");
   });
@@ -445,7 +452,9 @@ describe("taking, extending and handing back", () => {
             id: "staging",
             owner: "alice",
             reason: "deploying",
-            expiresAt: new Date(Date.now() + 600 * 1000).toISOString(),
+            // Half a minute clear of the boundary: at exactly 600s the
+            // renderer floors to 9m as soon as any time has passed.
+            expiresAt: new Date(Date.now() + 630 * 1000).toISOString(),
           },
         }),
       },

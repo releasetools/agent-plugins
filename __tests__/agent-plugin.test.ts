@@ -22,16 +22,9 @@ import { fileURLToPath } from "node:url";
 // @ts-expect-error - packaging tooling, deliberately plain JS with no types
 import * as packaging from "../scripts/validate-plugin.mjs";
 // @ts-expect-error - packaging tooling, deliberately plain JS with no types
-import * as installer from "../scripts/install-agent-skills.mjs";
+import * as catalogs from "../scripts/catalogs.mjs";
 
 const { parseStrictJson, validatePlugin } = packaging;
-const {
-  DEFAULT_TARGETS,
-  installAgentSkills,
-  renderGeminiCommand,
-  shippedPlugins,
-  shippedSkills,
-} = installer;
 
 /**
  * The plugin is a directory four different agents read, and none of them says
@@ -84,6 +77,13 @@ function plugin(overrides: Record<string, unknown> = {}) {
 
   write(".claude-plugin/plugin.json", JSON.stringify(claude));
   write(".codex-plugin/plugin.json", JSON.stringify(codex));
+  if (overrides.portable !== null) {
+    write(
+      "plugin.json",
+      (overrides.portable as string) ??
+        catalogs.serializeJson(catalogs.portableManifest(claude)),
+    );
+  }
   write(
     `skills/${overrides.skillDirectory ?? "mutex"}/SKILL.md`,
     `---\nname: ${overrides.skillName ?? "mutex"}\ndescription: Takes locks\n---\n\n# mutex\n`,
@@ -135,11 +135,17 @@ describe("the plugin this repository publishes", () => {
   /**
    * The two skills answer different questions: naming decides which lock an
    * operation takes and what it is called, mutex decides everything around a
-   * lock being taken. An unexpected third is a directory the installer would
-   * start copying to every agent, so it has to be named here first.
+   * lock being taken. An unexpected third is a skill every agent starts
+   * loading, so it has to be named here first.
    */
   it("ships the mutex and naming skills, and nothing else", () => {
-    expect(shippedSkills(PLUGIN)).toEqual(["mutex", "naming"]);
+    const skills = fs
+      .readdirSync(path.join(PLUGIN, "skills"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+
+    expect(skills).toEqual(["mutex", "naming"]);
   });
 
   it("gives the agents a slash menu, not just a skill", () => {
@@ -323,6 +329,55 @@ describe("validatePlugin", () => {
    * Codex requires the interface block, and `category` is also the only place
    * the published Codex catalog entry can get a category from.
    */
+  /**
+   * Hermes and Antigravity clone this repository and look for `plugin.json`
+   * where the plugin starts. Neither reads a catalog, so a stale or missing
+   * one is not caught anywhere downstream: the plugin simply installs at the
+   * wrong version, or is not found at all.
+   */
+  it("catches a plugin that no agent cloning the repository could find", () => {
+    expect(validatePlugin({ root: build({ portable: null }) }).errors).toEqual([
+      expect.stringContaining("plugin.json is missing"),
+    ]);
+  });
+
+  it("catches a portable manifest left behind by a version bump", () => {
+    const stale = catalogs.serializeJson(
+      catalogs.portableManifest({ ...MANIFEST, version: "0.0.9" }),
+    );
+
+    expect(validatePlugin({ root: build({ portable: stale }) }).errors).toEqual(
+      [
+        expect.stringContaining(
+          "plugin.json is not what .claude-plugin/plugin.json describes",
+        ),
+      ],
+    );
+  });
+
+  it("publishes the portable manifest the schema names, and nothing else", () => {
+    const manifest = catalogs.portableManifest({
+      ...MANIFEST,
+      author: { name: "ReleaseTools", url: "https://github.com/releasetools" },
+      license: "Apache-2.0",
+      keywords: ["lock"],
+      // Codex's own fields have no place in a format that rejects what it
+      // does not know.
+      skills: "./skills/",
+      interface: { displayName: "mutex" },
+    });
+
+    expect(manifest).toEqual({
+      $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+      name: "mutex",
+      version: "0.1.0",
+      description: "Guard a shared resource with a distributed lock",
+      author: { name: "ReleaseTools", url: "https://github.com/releasetools" },
+      license: "Apache-2.0",
+      keywords: ["lock"],
+    });
+  });
+
   it("catches a Codex manifest with nothing to display", () => {
     expect(
       validatePlugin({ root: build({ face: { category: "" } }) }).errors,
@@ -332,26 +387,6 @@ describe("validatePlugin", () => {
       validatePlugin({ root: build({ codex: { interface: undefined } }) })
         .errors,
     ).toEqual([expect.stringContaining("has no interface block")]);
-  });
-});
-
-describe("renderGeminiCommand", () => {
-  it("moves the front matter into description and the body into prompt", () => {
-    const rendered = renderGeminiCommand(
-      "---\nname: lock\ndescription: Take a lock\n---\n\nTake a lock on $ARGUMENTS.\n",
-    );
-
-    expect(rendered).toContain('description = "Take a lock"');
-    expect(rendered).toContain("Take a lock on {{args}}.");
-    expect(rendered).not.toContain("name: lock");
-  });
-
-  it("escapes what would otherwise end the string early", () => {
-    const rendered = renderGeminiCommand(
-      '---\ndescription: d\n---\n\nA backslash \\ and a """ inside.\n',
-    );
-
-    expect(rendered).toContain('A backslash \\\\ and a \\"\\"\\" inside.');
   });
 });
 
@@ -374,265 +409,5 @@ describe("parseStrictJson", () => {
       a: '{"name":1}',
       name: 2,
     });
-  });
-});
-
-describe("installAgentSkills", () => {
-  const homes: string[] = [];
-
-  const home = (agents: string[]) => {
-    const root = fs.realpathSync(
-      fs.mkdtempSync(path.join(os.tmpdir(), "home-")),
-    );
-    for (const agent of agents) {
-      fs.mkdirSync(path.join(root, agent), { recursive: true });
-    }
-    homes.push(root);
-    return root;
-  };
-
-  afterEach(() => {
-    for (const root of homes.splice(0)) {
-      fs.rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it("leaves Claude and Codex to their manifests unless asked", () => {
-    expect(DEFAULT_TARGETS).toEqual(["hermes", "gemini"]);
-  });
-
-  it("copies every skill into each agent that is installed", () => {
-    const root = home([".hermes", ".gemini"]);
-    const { results } = installAgentSkills({ root: PLUGIN, home: root });
-
-    expect(results.map((result: { status: string }) => result.status)).toEqual([
-      "written",
-      "written",
-    ]);
-    for (const skill of ["mutex", "naming"]) {
-      expect(
-        fs.existsSync(
-          path.join(root, `.hermes/skills/devops/${skill}/SKILL.md`),
-        ),
-      ).toBe(true);
-      expect(
-        fs.existsSync(path.join(root, `.gemini/skills/${skill}/SKILL.md`)),
-      ).toBe(true);
-    }
-  });
-
-  /**
-   * The commands invoke the helper inside the mutex skill, so installing a
-   * subset that leaves that skill out must leave them out too - a slash menu
-   * naming a file that was never copied fails at the moment it is used.
-   */
-  it("installs a named subset, without commands that need what it omits", () => {
-    const root = home([".gemini"]);
-    installAgentSkills({ root: PLUGIN, home: root, skills: ["naming"] });
-
-    expect(
-      fs.existsSync(path.join(root, ".gemini/skills/naming/SKILL.md")),
-    ).toBe(true);
-    expect(fs.existsSync(path.join(root, ".gemini/skills/mutex"))).toBe(false);
-    expect(fs.existsSync(path.join(root, ".gemini/commands"))).toBe(false);
-  });
-
-  it("does not create a home for an agent that is not installed", () => {
-    const root = home([".hermes"]);
-    const { results } = installAgentSkills({ root: PLUGIN, home: root });
-
-    expect(
-      results.find((result: { agent: string }) => result.agent === "gemini")
-        .status,
-    ).toBe("absent");
-    expect(fs.existsSync(path.join(root, ".gemini"))).toBe(false);
-  });
-
-  it("writes nothing the second time, and reports staleness for CI", () => {
-    const root = home([".hermes", ".gemini"]);
-    installAgentSkills({ root: PLUGIN, home: root });
-    expect(
-      installAgentSkills({ root: PLUGIN, home: root, check: true }).results,
-    ).toEqual([
-      expect.objectContaining({ status: "current" }),
-      expect.objectContaining({ status: "current" }),
-    ]);
-
-    fs.writeFileSync(
-      path.join(root, ".hermes/skills/devops/mutex/SKILL.md"),
-      "an older release",
-    );
-    const { results } = installAgentSkills({
-      root: PLUGIN,
-      home: root,
-      check: true,
-    });
-    expect(results[0].status).toBe("stale");
-    expect(
-      fs.readFileSync(
-        path.join(root, ".hermes/skills/devops/mutex/SKILL.md"),
-        "utf8",
-      ),
-    ).toBe("an older release");
-  });
-
-  /**
-   * Gemini reads TOML where Claude Code and Codex read the markdown directly,
-   * so its commands are rendered on the way in rather than written twice.
-   */
-  it("renders the same commands into Gemini's dialect", () => {
-    const root = home([".gemini"]);
-    installAgentSkills({ root: PLUGIN, home: root });
-
-    const rendered = path.join(root, ".gemini/commands/mutex");
-    expect(fs.readdirSync(rendered).sort()).toEqual(
-      fs
-        .readdirSync(path.join(PLUGIN, "commands"))
-        .map((entry) => entry.replace(/\.md$/, ".toml"))
-        .sort(),
-    );
-    const lock = fs.readFileSync(path.join(rendered, "lock.toml"), "utf8");
-    expect(lock).toMatch(/^description = "/);
-    expect(lock).toContain("{{args}}");
-    expect(lock).not.toContain("$ARGUMENTS");
-
-    // Nothing Claude-only survives: the plugin root becomes the path the skill
-    // was installed at, and pre-execution becomes Gemini's own syntax.
-    for (const file of fs.readdirSync(rendered)) {
-      const toml = fs.readFileSync(path.join(rendered, file), "utf8");
-      expect(toml).not.toContain("CLAUDE_PLUGIN_ROOT");
-      expect(toml).not.toMatch(/!`/);
-      if (toml.includes("agent-lock.mjs")) {
-        expect(toml).toContain(path.join(root, ".gemini/skills/mutex"));
-      }
-    }
-  });
-
-  it("does not give Hermes commands it cannot read", () => {
-    const root = home([".hermes"]);
-    installAgentSkills({ root: PLUGIN, home: root });
-
-    expect(fs.existsSync(path.join(root, ".hermes/commands"))).toBe(false);
-    expect(
-      fs.existsSync(path.join(root, ".hermes/skills/devops/mutex/SKILL.md")),
-    ).toBe(true);
-  });
-
-  it("refuses an agent it does not know how to install for", () => {
-    expect(() =>
-      installAgentSkills({
-        root: PLUGIN,
-        home: home([]),
-        targets: ["emacs"],
-      }),
-    ).toThrow(/unknown agent/);
-  });
-
-  /**
-   * The agents that read a manifest get every plugin in the marketplace. The
-   * ones that read a directory used to get one, which is a plugin that ships
-   * and reaches four agents out of six.
-   */
-  it("installs every plugin in the marketplace, not one of them", () => {
-    const root = home([".gemini"]);
-    const { plugins } = installAgentSkills({ root: MARKETPLACE, home: root });
-
-    expect(plugins.map((plugin: { name: string }) => plugin.name)).toEqual([
-      "mutex",
-      "release-notes",
-    ]);
-    for (const skill of ["mutex", "naming", "release-notes"]) {
-      expect(
-        fs.existsSync(path.join(root, `.gemini/skills/${skill}/SKILL.md`)),
-      ).toBe(true);
-    }
-    expect(
-      fs.existsSync(
-        path.join(root, ".gemini/commands/release-notes/draft.toml"),
-      ),
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(root, ".gemini/commands/mutex/lock.toml")),
-    ).toBe(true);
-  });
-
-  it("gives each plugin its own command namespace and skills path", () => {
-    const root = home([".gemini"]);
-    installAgentSkills({ root: MARKETPLACE, home: root });
-
-    const draft = fs.readFileSync(
-      path.join(root, ".gemini/commands/release-notes/draft.toml"),
-      "utf8",
-    );
-    expect(draft).not.toContain("CLAUDE_PLUGIN_ROOT");
-    expect(draft).toContain(
-      path.join(root, ".gemini/skills/release-notes/agent-notes.mjs"),
-    );
-  });
-
-  it("installs one plugin when it is named", () => {
-    const root = home([".gemini"]);
-    const { plugins } = installAgentSkills({
-      root: MARKETPLACE,
-      home: root,
-      plugins: ["release-notes"],
-    });
-
-    expect(plugins).toHaveLength(1);
-    expect(fs.existsSync(path.join(root, ".gemini/skills/release-notes"))).toBe(
-      true,
-    );
-    expect(fs.existsSync(path.join(root, ".gemini/skills/mutex"))).toBe(false);
-    expect(fs.existsSync(path.join(root, ".gemini/commands/mutex"))).toBe(
-      false,
-    );
-  });
-
-  it("refuses a plugin this tree does not have", () => {
-    expect(() =>
-      installAgentSkills({
-        root: MARKETPLACE,
-        home: home([]),
-        plugins: ["callsign"],
-      }),
-    ).toThrow(/unknown plugin\(s\): callsign/);
-  });
-
-  /**
-   * Every agent here reads one flat skills directory, so two plugins claiming
-   * the same skill name would leave whichever sorted later in place and the
-   * other agent following instructions from a plugin nobody installed.
-   */
-  it("refuses two plugins that ship the same skill name", () => {
-    const tree = home([]);
-    for (const plugin of ["alpha", "beta"]) {
-      const skill = path.join(tree, "plugins", plugin, "skills", "shared");
-      fs.mkdirSync(skill, { recursive: true });
-      fs.writeFileSync(path.join(skill, "SKILL.md"), `from ${plugin}\n`);
-    }
-
-    expect(() => installAgentSkills({ root: tree, home: home([]) })).toThrow(
-      /both ship a skill called 'shared'/,
-    );
-  });
-
-  /**
-   * A published npm package carries one plugin's `skills/` and `commands/` at
-   * the top level, because a global install is the only checkout most people
-   * have. The directory it unpacks into is the plugin's name.
-   */
-  it("reads a package that carries one plugin at its top level", () => {
-    const tree = path.join(home([]), "release-notes");
-    fs.mkdirSync(path.join(tree, "skills", "release-notes"), {
-      recursive: true,
-    });
-    fs.writeFileSync(
-      path.join(tree, "skills", "release-notes", "SKILL.md"),
-      "---\nname: release-notes\n---\n",
-    );
-
-    expect(shippedPlugins(tree)).toEqual([
-      { name: "release-notes", root: tree },
-    ]);
   });
 });

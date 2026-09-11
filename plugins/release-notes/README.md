@@ -27,6 +27,17 @@ codex plugin marketplace add releasetools/agent-plugins
 codex plugin add release-notes@ReleaseTools
 ```
 
+Hermes and Antigravity clone this repository and read `plugin.json`, so they
+install from GitHub with no marketplace to add:
+
+```shell
+hermes plugins install releasetools/agent-plugins/plugins/release-notes
+agy plugin install https://github.com/releasetools/agent-plugins
+```
+
+`agy` takes every plugin in the repository. `hermes` takes the one its
+subdirectory names.
+
 ## What it needs
 
 `git`, and a repository with commits. `gh` is optional: `--pr` fetches the pull

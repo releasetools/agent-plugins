@@ -13,8 +13,8 @@ expected - the skill covers the decisions, this covers the details.
   be searched for.
 - **Everywhere else** it is `agent-lock.mjs` in the same directory as this
   file - the skill directory the agent loaded, which is
-  `~/.hermes/skills/devops/mutex/`, `~/.gemini/skills/mutex/`, or a plugin
-  cache under `~/.codex/plugins/`.
+  `~/.hermes/plugins/mutex/skills/mutex/`, `~/.gemini/config/plugins/mutex/skills/mutex/`,
+  or a plugin cache under `~/.codex/plugins/`.
 - A globally installed CLI carries a copy at
   `$(npm root -g)/@releasetools/mutex/skills/mutex/agent-lock.mjs`.
 
@@ -114,7 +114,13 @@ releasing another's.
 
 Where nothing in the environment names a session the owner is the agent and
 host alone, and every session on that machine shares it. `/mutex:preflight`
-says so when that is the case.
+says so when that is the case, and the fix is for the user to export
+`$MUTEX_SESSION_ID` with anything that differs between their sessions. Suggest
+it rather than working around it: locks that cannot tell two sessions apart are
+locks either can take back.
+
+`$MUTEX_AGENT_NAME` renames the agent half for an agent this helper does not
+recognise, which changes what `mutex list` reads like and nothing else.
 
 Only a named lock is protected; an unowned one is open to anyone. The Action
 takes unowned locks unless a workflow sets `owner`.
