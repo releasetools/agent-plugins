@@ -300,6 +300,54 @@ describe("where the entry lands", () => {
   });
 });
 
+describe("the date an entry carries", () => {
+  it("dates an entry from the commit it names", () => {
+    const root = repository();
+    commit(root, "First", { "a.txt": "one\n" });
+    // The committer date is when the release landed on the branch, which is
+    // what a changelog heading is claiming. --date would move the author's.
+    spawnSync("git", ["commit", "--amend", "--quiet", "--no-edit"], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, GIT_COMMITTER_DATE: "2026-08-19T10:00:00+02:00" },
+    });
+    git(root, ["tag", "released-in-august"]);
+    commit(root, "Later", { "b.txt": "two\n" });
+    fs.writeFileSync(scratchPath(root), "What shipped in August.\n");
+
+    const result = run(root, ["write", "0.1.0", "--at", "released-in-august"]);
+
+    expect(result.code).toBe(0);
+    expect(fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8")).toContain(
+      "## 0.1.0 - 2026-08-19",
+    );
+  });
+
+  it("dates from today when no commit is named", () => {
+    const root = repository();
+    commit(root, "First", { "a.txt": "one\n" });
+    fs.writeFileSync(scratchPath(root), "What shipped.\n");
+
+    expect(run(root, ["write", "0.1.0"]).code).toBe(0);
+
+    expect(fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8")).toContain(
+      `## 0.1.0 - ${today()}`,
+    );
+  });
+
+  it("refuses a revision that is not a commit, writing nothing", () => {
+    const root = repository();
+    commit(root, "First", { "a.txt": "one\n" });
+    fs.writeFileSync(scratchPath(root), "What shipped.\n");
+
+    const result = run(root, ["write", "0.1.0", "--at", "nowhere"]);
+
+    expect(result.code).toBe(2);
+    expect(result.err).toContain("--at 'nowhere' is not a commit");
+    expect(fs.existsSync(path.join(root, "CHANGELOG.md"))).toBe(false);
+  });
+});
+
 describe("versions and headings", () => {
   it("takes a version with or without its v, and refuses anything else", () => {
     expect(readVersion("v1.2.3")).toBe("1.2.3");

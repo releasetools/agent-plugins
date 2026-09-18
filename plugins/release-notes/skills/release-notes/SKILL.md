@@ -122,6 +122,11 @@ scratch file for whatever publishes the release. It refuses a version the
 changelog already carries. Pass the same `--path` you passed to `commits`, or
 the entry lands in the wrong file.
 
+The date is today, which is right for a release being cut now and wrong for
+one written up afterwards. `--at <rev>` dates the entry from that commit
+instead, so a version released in August and written up in September is dated
+August. Name the commit that released the version, not the one you are on.
+
 ## The shape of an entry
 
 Say what changed and what the reader does about it. An entry that names a

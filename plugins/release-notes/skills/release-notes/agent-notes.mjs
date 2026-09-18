@@ -348,6 +348,30 @@ export function today(now = new Date()) {
 }
 
 /**
+ * The date an entry carries: the commit date of `at`, or today.
+ *
+ * Today is right for a release being cut now and wrong for one written up
+ * afterwards, which is what a subtree versioned on its own usually needs: a
+ * plugin released in August and written up in September is dated August. A
+ * date read off the commit cannot be mistyped, and cannot contradict the
+ * history the entry describes.
+ */
+export function dateFor(cwd, at) {
+  if (!at) {
+    return today();
+  }
+  // %cs is the committer date as YYYY-MM-DD, in the timezone it was made in.
+  const stamp = git(["log", "-1", "--format=%cs", at, "--"], {
+    cwd,
+    allowFailure: true,
+  });
+  if (stamp === null || stamp.trim() === "") {
+    throw new HelperError(`--at '${at}' is not a commit`, EXIT_USAGE);
+  }
+  return stamp.trim();
+}
+
+/**
  * Puts a version's section above every older one and below the preamble.
  *
  * Newest first is what Keep a Changelog asks for and what a reader coming from
@@ -436,7 +460,7 @@ function commandEvidence(sha, shared) {
 }
 
 function commandWrite(argument, shared) {
-  const { cwd, subtree, stdout } = shared;
+  const { cwd, at, subtree, stdout } = shared;
   const version = readVersion(argument);
   const root = repositoryRoot(cwd);
 
@@ -463,7 +487,7 @@ function commandWrite(argument, shared) {
     );
   }
 
-  const date = today();
+  const date = dateFor(cwd, at);
   fs.writeFileSync(file, insertSection(existing, `${version} - ${date}`, body));
   // The same bytes in both places, so what is published and what is committed
   // cannot differ by a stray blank line.
@@ -495,10 +519,12 @@ export function usage(invocation = "agent-notes.mjs") {
       omitted past ${PATCH_LINE_LIMIT} lines and the stat says how long it was.
       --pr adds the pull requests it landed through, at one API call.
 
-  node ${invocation} write <version>
+  node ${invocation} write <version> [--at <rev>]
       Reads the body from the scratch file, puts it in CHANGELOG.md under
       '## <version> - <date>' above every older release, and normalises the
       scratch file to the same bytes.
+      --at dates the entry from that commit rather than today, for a release
+      written up after the fact.
 
   --path <dir>
       On 'commits' and 'write': draft for one subtree instead of the whole
@@ -520,6 +546,7 @@ export function main(argv, options = {}) {
       args: argv,
       options: {
         since: { type: "string" },
+        at: { type: "string" },
         path: { type: "string" },
         pr: { type: "boolean" },
         help: { type: "boolean", short: "h" },
@@ -542,6 +569,7 @@ export function main(argv, options = {}) {
   const shared = {
     cwd: options.cwd ?? process.cwd(),
     since: values.since?.trim() || undefined,
+    at: values.at?.trim() || undefined,
     subtree: null,
     pr: values.pr === true,
     stdout,

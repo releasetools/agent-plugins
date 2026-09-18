@@ -1,7 +1,7 @@
 ---
 name: draft
 description: Draft a release's changelog entry from the commits since the last tag
-argument-hint: "<version> [--path <dir>]"
+argument-hint: "<version> [--path <dir>] [--at <rev>]"
 allowed-tools:
   - Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/release-notes/agent-notes.mjs:*)
   - Bash(node "${CLAUDE_PLUGIN_ROOT}/skills/release-notes/agent-notes.mjs":*)
@@ -14,6 +14,9 @@ If no version was given, ask for one. Never guess it from the commits.
 
 A `--path <dir>` in the arguments releases that subtree rather than the whole
 repository. Pass it to both the `commits` call and the `write` call, unchanged.
+
+An `--at <rev>` dates the entry from that commit rather than today, for a
+release being written up after the fact. It belongs on the `write` call alone.
 
 Read the release-notes skill first. It carries the test every commit is ruled
 against, the shape of an entry, and what never goes in one. Nothing below
