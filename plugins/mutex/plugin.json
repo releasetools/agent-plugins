@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "mutex",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Guard a shared resource with a distributed lock, using the mutex CLI",
   "author": {
     "name": "ReleaseTools",
