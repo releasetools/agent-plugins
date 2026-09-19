@@ -171,11 +171,13 @@ other repositories and cannot be found from here.
 ## The website
 
 [releasetools/website](https://github.com/releasetools/website) documents the
-ReleaseTools tools, and the plugin is on it. `docs/mutex.md` carries an
+ReleaseTools tools, and both plugins are on it. `docs/mutex.md` carries an
 `## Agent plugin` section covering the marketplace install commands, both
 skills, and every entry in the slash menu, alongside the CLI and the Action.
-There is no `docs/agent-plugins.md`, and a second page would only repeat it.
-`release-notes` has no page there at all yet.
+`release-notes` has `docs/release-notes.md` to itself, since no CLI and no
+Action sit behind it: the install commands for all four clients, the command
+table, the two files it writes, and what it will not do. There is no
+`docs/agent-plugins.md`, and a third page would only repeat them.
 
 **A release that changes what a user sees needs a pull request there too**: the
 install commands, what is in the slash menu, what the skill will and will not
