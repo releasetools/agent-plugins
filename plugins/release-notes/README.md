@@ -47,10 +47,58 @@ pull request body.
 
 ## Commands
 
-| Command                                         |                                            |
-| ----------------------------------------------- | ------------------------------------------ |
-| `/release-notes:draft <version> [--path <dir>]` | Rule on every commit, then write the entry |
-| `/release-notes:help`                           | What the plugin does, and what it will not |
+| Command                                           |                                                                 |
+| ------------------------------------------------- | --------------------------------------------------------------- |
+| `/release-notes:write [--pr <number>]`            | This change's note, into the pull request and the changelog     |
+| `/release-notes:prepare <version> [--path <dir>]` | A release's entry, collated from the notes its changes declared |
+| `/release-notes:help`                             | What the plugin does, and what it will not                      |
+
+## One change at a time
+
+`/release-notes:write` is run on a branch, before the change is merged, which
+is while the person who made it still knows why. It rules the change against
+the one test, writes the note to `$GIT_DIR/NOTE_EDITMSG`, puts the block in
+the pull request's description and the entry in the changelog of every project
+the change lands in.
+
+Which projects those are, where each keeps its version and its changelog, and
+whether the repository writes entries per change at all are read from
+`.releasetools.yaml` at the repository root, the file every releasetools tool
+reads. A note that lands in the wrong package's changelog is worse than no
+note, and that file is what stands between the two.
+
+It never writes a manifest version. Where a project's version is one that was
+already released, it says so and names what the change asks for instead, and
+the note stays in `NOTE_EDITMSG` until the bump lands.
+
+## A note the author wrote
+
+A change can carry its own release note, in a fenced block in its commit
+message or pull request description:
+
+````markdown
+```release-note
+Batch mode processes up to 10,000 records per request. Enable it with the
+batch=true query parameter.
+```
+````
+
+That note is what gets published, taken as written, because the person who
+wrote it was there. `NONE` in the block says a reader can observe nothing, and
+the commit is ruled that way without its patch being read. A change with no
+block is drafted from its diff at release, and `/release-notes:prepare`'s
+ruling table says which of the two each row came from.
+
+The block has to reach the commit that lands on the default branch, because
+that is the copy a release reads months later. A merge that writes its own
+commit body copies the block into it verbatim.
+
+The [releasetools conventions](https://github.com/releasetools/conventions)
+define the block, and the subject's
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) type
+supplies the category: a `feat` lands under `Added`, a `fix` under `Fixed`,
+and a `!` or a `BREAKING CHANGE:` footer makes it breaking. None of that is
+guessed from the prose.
 
 ## One subtree, or the whole repository
 
@@ -61,7 +109,7 @@ subtree draft and a repository draft can be in flight at once. A subtree is
 usually versioned on its own rather than tagged, so pass `--since` with it.
 
 ```shell
-/release-notes:draft 0.3.0 --path plugins/release-notes
+/release-notes:prepare 0.3.0 --path plugins/release-notes
 ```
 
 ## A release written up after the fact
@@ -73,7 +121,7 @@ was versioned before it kept a changelog one section per version, each dated
 from the commit that released it.
 
 ```shell
-/release-notes:draft 0.1.0 --path plugins/mutex --since v0.0.9 --at eb4814e
+/release-notes:prepare 0.1.0 --path plugins/mutex --since v0.0.9 --at eb4814e
 ```
 
 A date read off a commit cannot be mistyped, and cannot contradict the history
@@ -84,7 +132,7 @@ for itself. They are drafted separately and nothing reconciles them, so the
 repository's entry can summarise what the subtree entries said or say
 something none of them did.
 
-## The two files it writes
+## The files it writes
 
 `CHANGELOG.md` gets a `## <version> - <ISO date>` section above every older
 release and below the file's preamble, in
@@ -92,7 +140,8 @@ release and below the file's preamble, in
 created with a preamble when the repository has none.
 
 `RELEASE_EDITMSG` gets the same body with no version heading, for whatever
-publishes the release. It lives in `$GIT_DIR` next to git's own
+publishes the release. `NOTE_EDITMSG` beside it holds one change's note while
+it is being written. It lives in `$GIT_DIR` next to git's own
 `COMMIT_EDITMSG` and `TAG_EDITMSG`, which puts it outside the work tree, where
 nothing can commit it by accident. Resolve it the way the plugin does, never by
 joining `.git/`:
@@ -119,7 +168,7 @@ ever disagree, `CHANGELOG.md` is the one that went through review.
 
 ## What it will not do
 
-It drafts an entry and writes two files. It never tags, commits, pushes,
+It drafts entries and writes files. It never tags, commits, pushes,
 publishes or opens a pull request, and it never picks the version number: that
 is an argument, because a version guessed from commits is a version somebody
 has to notice is wrong.

@@ -5,6 +5,64 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.4.0 - 2026-09-19
+
+`/release-notes:write` writes the note for one change, on the branch that
+makes it, which is while the person who made it still knows why. It rules the
+change against the one test, puts the `release-note` block in the pull
+request's description and the entry in the changelog of every project the
+change lands in, and says what it wrote.
+
+Which projects those are, where each keeps its version and its changelog, and
+whether the repository writes entries per change at all come from
+`.releasetools.yaml` at the repository root, the file the release guards read
+too. A note that lands in the wrong package's changelog is worse than no note.
+It never writes a manifest version: where a project is on a version that was
+already released, it says so, names what the change asks for instead, and
+leaves the note in `$GIT_DIR/NOTE_EDITMSG` until the bump lands.
+
+`/release-notes:draft` is now `/release-notes:prepare`, and it collates a
+release from the notes its changes declared rather than reading every diff. A
+change that declared a note contributes that note, as written. One that
+declared `NONE` is ruled as observing nothing without its patch being read.
+Only what declared neither costs a reading of the diff, and the ruling table
+says which of the three each row was.
+
+The evidence for a commit carries what the change declared about itself: the
+`release-note` block, and the
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) type
+and scope from the subject, with the changelog section that type asks for and
+whether a `!` or a `BREAKING CHANGE:` footer made it breaking. A `feat` lands
+under `Added` without the category being guessed from prose. `--pulls` on
+`evidence` fetches the pull requests a commit landed through, each with its
+own block.
+
+`/release-notes:draft` still runs, says the new name once and does the work,
+so a repository whose own release notes point at the old one keeps working.
+
+`.releasetools.yaml` is read by the same code the release guards in
+[releasetools/actions](https://github.com/releasetools/actions) read it with,
+carried here byte for byte, so a file one of them accepts is a file the other
+accepts. It reads the subset of YAML the format is written in and refuses the
+rest by name and line.
+
+### Choices
+
+One reader, vendored rather than depended on. A plugin installs as a clone of
+its marketplace and never runs `npm install`, so a dependency would not be
+there to import. Two implementations would be two answers to which project a
+change belongs to, and the one that disagrees writes a note into the wrong
+changelog.
+
+The note beats the diff, rather than being merged with it. An author who wrote
+one was there; a reader of the patch is inferring. The diff still overrules a
+note it contradicts, and that disagreement is reported rather than edited away
+quietly.
+
+The declaration is read by the plugin rather than passed to it. Flags would
+have let a caller say which changelog to write, and the one thing that must
+never happen is a note in the wrong project's file.
+
 ## 0.3.2 - 2026-09-18
 
 `--at <rev>` dates an entry from that commit rather than today, for a release

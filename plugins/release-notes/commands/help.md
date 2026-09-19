@@ -6,13 +6,21 @@ argument-hint: ""
 
 Tell the user this, in your own words but no longer, and run nothing:
 
-- `/release-notes:draft <version>` - rule on every commit since the last tag,
-  then write the entry to `CHANGELOG.md` and to `$GIT_DIR/RELEASE_EDITMSG`
+- `/release-notes:write` - write the release note for the change on this
+  branch, into the pull request's description and into the changelog of every
+  project the change lands in
+- `/release-notes:prepare <version>` - collate a release's entry from the
+  notes its changes declared, ruling on the ones that declared none, into
+  `CHANGELOG.md` and `$GIT_DIR/RELEASE_EDITMSG`
+- `/release-notes:draft` - the old name for `prepare`, which it runs
 
-Every commit in the range is ruled against one test, can a person running the
-software observe it, and the ruling is shown before anything is written. A
-commit that changes nothing a user sees gets no entry, and a class of them
-gets no entry either.
+A change declares its note in a fenced `release-note` block, and that note is
+what gets published, taken as written. A change with no block is ruled against
+one test, can a person running the software observe it, and the ruling is
+shown before anything is written.
 
-It writes two files and stops. It never tags, commits, pushes or publishes,
-and it never picks the version number.
+Which projects exist, where each keeps its version and changelog, and which
+conventions the repository follows are read from `.releasetools.yaml`.
+
+It writes files and stops. It never tags, commits, pushes or publishes, and it
+never picks the version number.

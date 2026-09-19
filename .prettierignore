@@ -1,1 +1,5 @@
 node_modules
+
+# Carried byte for byte from releasetools/actions; formatting it here would
+# make the copies differ.
+plugins/release-notes/bin/releasetools-config.cjs
