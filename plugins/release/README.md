@@ -36,7 +36,6 @@ projects:
 
 release:
   branch: main
-  tag: v{version}
   checks: tests.yml
   publish: publish.yml
   registry: https://pypi.org/pypi/worktrees/{version}/json

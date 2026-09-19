@@ -143,9 +143,12 @@ the same version, since no tag was created.
 ## 5. Tag, which is what publishes
 
 ```bash
-git tag --annotate <tag> --message "<tag>"
-git push origin refs/tags/<tag>
+git tag --annotate v<version> --message "v<version>"
+git push origin refs/tags/v<version>
 ```
+
+In a repository whose projects version independently the tag names the
+project as well: `<project>/v<version>`.
 
 Pushing the tag is the release. Where the repository declares a `publish`
 workflow, watch it to the end:
