@@ -208,7 +208,7 @@ function unquote(text) {
  */
 function settingsFrom(text, where = CONFIG_FILE) {
   if (text.trim() === '') {
-    return { projects: [], ignoreFiles: null, caseSensitive: false, except: [] };
+    return { projects: [], release: {}, ignoreFiles: null, caseSensitive: false, except: [] };
   }
 
   const parsed = parseYaml(text, where);
@@ -219,6 +219,7 @@ function settingsFrom(text, where = CONFIG_FILE) {
   // Unrecognised keys belong to other tools reading the same file.
   return {
     projects: projectsFrom(parsed['projects'], `${where} projects`),
+    release: releaseFrom(parsed['release'], `${where} release`),
     ignoreFiles:
       parsed['ignore-files'] === undefined
         ? null
@@ -229,6 +230,38 @@ function settingsFrom(text, where = CONFIG_FILE) {
 }
 
 const KEYS = ['path', 'manifest', 'changelog', 'bump'];
+
+/** What the format says a release is cut from, checked against, and started by. */
+const RELEASE_KEYS = ['branch', 'checks', 'publish', 'registry'];
+
+/**
+ * How a release is cut, where the repository says.
+ *
+ * Unknown keys here are left alone rather than refused: a guard does not act
+ * on any of this, and failing a pull request over a key belonging to whatever
+ * cuts the release would be answering a question nobody asked it.
+ */
+function releaseFrom(value, where) {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new ConfigError(`${where} must be a mapping, for example:\n  release:\n    branch: main`);
+  }
+
+  const declared = {};
+  for (const key of RELEASE_KEYS) {
+    const found = value[key];
+    if (found === undefined || found === null) {
+      continue;
+    }
+    if (typeof found !== 'string' || found.trim() === '') {
+      throw new ConfigError(`${where} ${key} must be a name, or left out`);
+    }
+    declared[key] = found.trim();
+  }
+  return declared;
+}
 
 /** The groups of projects a repository holds. */
 function projectsFrom(value, where) {
