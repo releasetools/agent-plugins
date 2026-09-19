@@ -12,6 +12,7 @@ Tell the user this, in your own words but no longer, and run nothing:
 - `/release-notes:prepare <version>` - collate a release's entry from the
   notes its changes declared, ruling on the ones that declared none, into
   `CHANGELOG.md` and `$GIT_DIR/RELEASE_EDITMSG`
+- `/release-notes:draft` - the old name for `prepare`, which it runs
 
 A change declares its note in a fenced `release-note` block, and that note is
 what gets published, taken as written. A change with no block is ruled against

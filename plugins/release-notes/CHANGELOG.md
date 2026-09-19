@@ -37,6 +37,9 @@ under `Added` without the category being guessed from prose. `--pulls` on
 `evidence` fetches the pull requests a commit landed through, each with its
 own block.
 
+`/release-notes:draft` still runs, says the new name once and does the work,
+so a repository whose own release notes point at the old one keeps working.
+
 ### Choices
 
 The note beats the diff, rather than being merged with it. An author who wrote
