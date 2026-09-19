@@ -5,6 +5,34 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.4.0 - 2026-09-19
+
+A change that declares its own release note gets that note published. The
+evidence for a commit now carries the ` ```release-note ` block from its
+description, and the drafting reads it as the author's own words about their
+own change: taken as written, fitted to a section, not rewritten. A block
+saying `NONE` is an answer, so the commit is ruled as observing nothing
+without anybody reading its patch. A commit with no block is drafted from the
+diff exactly as before, and the ruling table says which of the two each row
+came from.
+
+The evidence also carries what the subject declared: the
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) type
+and scope, the section that type's notes belong under, and whether a `!` or a
+`BREAKING CHANGE:` footer made it breaking. A `feat` lands under `Added`
+without the category being guessed from the prose.
+
+With `--pr`, each pull request carries its own block, so a repository that
+writes the note in the pull request description rather than the commit gets
+the same treatment.
+
+### Choices
+
+The block wins over the diff, rather than being merged with it. An author who
+wrote a note was there; a reader of the patch is inferring. The diff still
+overrules a note it contradicts, and that disagreement is reported rather than
+edited away quietly.
+
 ## 0.3.2 - 2026-09-18
 
 `--at <rev>` dates an entry from that commit rather than today, for a release

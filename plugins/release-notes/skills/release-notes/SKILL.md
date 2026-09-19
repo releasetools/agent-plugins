@@ -81,6 +81,7 @@ Then one row per commit, and show the table:
 | Field         | What goes in it                                                 |
 | ------------- | --------------------------------------------------------------- |
 | `sha`         | as printed                                                      |
+| `source`      | `note`, `NONE` or `diff`, from the rule below                   |
 | `observable`  | yes or no, against the test above                               |
 | `category`    | one of the six below, or none                                   |
 | `breaking`    | yes or no                                                       |
@@ -93,6 +94,44 @@ the patch is the evidence: a commit saying "fix typo" that also moves a
 default is caught here or nowhere. Say what the diff shows and rule on that,
 not on the message.
 
+### Where the entry comes from
+
+`note` in the evidence says whether the author wrote one. Three cases, and
+`source` records which one each commit was:
+
+| `note`                       | `source` | what to do                                       |
+| ---------------------------- | -------- | ------------------------------------------------ |
+| `declared: true`, has `text` | `note`   | the entry is that text, as written               |
+| `none: true`                 | `NONE`   | `observable` is no, and there is no entry        |
+| `declared: false`            | `diff`   | rule from the patch and write the entry yourself |
+
+A declared note is the author's own words about their own change, written
+when they still knew why, so take it as written. Fit it to the section and
+fix a typo; do not rewrite it into your own voice, and do not expand it from
+the diff.
+
+Overrule a note only when the diff contradicts it, and then say so in
+`discrepancy` rather than editing the note quietly. A note claiming a new flag
+that no diff adds is the case this catches.
+
+`NONE` is an answer and not a missing block, so a commit carrying it needs no
+reading of the patch. It stays in the table as a ruled row.
+
+`declares` carries what the subject said: `type`, `scope`, `section` and
+`breaking`. Where a type is known, its `section` is the category, so `feat`
+lands under `Added` and `fix` under `Fixed`, and `breaking` is already
+decided by a `!` or a `BREAKING CHANGE:` footer. Do not re-derive either from
+the prose. A commit whose subject follows no convention leaves them null, and
+the diff is all there is.
+
+`blocks` above 1 is a change that needed splitting and was not, which
+[the format](https://github.com/releasetools/conventions/blob/main/FORMAT.md)
+refuses. Take the first block, and say so in `discrepancy`.
+
+With `--pr`, each pull request carries its own `note`. A block in the pull
+request counts the same as one in the commit; where both exist and differ,
+the commit's is the later word and the difference is a `discrepancy`.
+
 `patch` comes back null on a large commit, with `patchOmitted` giving its
 length. Rule from the stat and the file list; a diff that long is a rewrite,
 a generated file or a first commit, and reading it line by line changes
@@ -102,7 +141,8 @@ Add `--pr` to fetch the pull requests a commit landed through. Try it on one
 commit first: under squash merges the commit body already is the pull request
 body, and then it costs an API call per commit and adds nothing.
 
-**Pass 3, write.** Only from the rows where `observable` is yes.
+**Pass 3, write.** Only from the rows where `observable` is yes, and from
+`entry` as the table holds it.
 
 Collapse a class only when a member of it is observable. Nine dependency
 bumps that change no behaviour are not one shorter entry, they are no entry.

@@ -88,6 +88,85 @@ const VERSION =
 const RECORD = "\x1e";
 const FIELD = "\x1f";
 
+// ---------------------------------------------------------------------------
+// What a change declares about itself
+// ---------------------------------------------------------------------------
+
+/**
+ * A fenced block tagged `release-note`, which is where a note is declared.
+ *
+ * Text outside the block is never a note: a description is written for a
+ * reviewer, and what a release publishes is the part somebody marked for
+ * publishing.
+ */
+const NOTE_BLOCK =
+  /^[ \t]*(`{3,}|~{3,})[ \t]*release-note[ \t]*\r?\n([\s\S]*?)\r?\n?^[ \t]*\1[ \t]*$/gm;
+
+/** A Conventional Commits subject: type, optional scope, optional `!`. */
+const SUBJECT = /^([a-zA-Z]+)(?:\(([^)]*)\))?(!)?:\s+(.+)$/;
+
+/** Which changelog section each type's notes belong under, null for silent types. */
+const SECTIONS = {
+  feat: "Added",
+  fix: "Fixed",
+  perf: "Changed",
+  deprecate: "Deprecated",
+  remove: "Removed",
+  security: "Security",
+  refactor: null,
+  test: null,
+  docs: null,
+  build: null,
+  ci: null,
+  chore: null,
+  style: null,
+};
+
+/**
+ * The release note a description declares, if it declares one.
+ *
+ * `NONE` is an author saying a reader can observe nothing, which is an answer
+ * and not a missing block. Two blocks are a change that needs splitting, and
+ * are reported rather than merged.
+ */
+export function releaseNote(text) {
+  const blocks = [...(text ?? "").matchAll(NOTE_BLOCK)].map((match) =>
+    match[2]
+      .replace(/^\s*\n/, "")
+      .trimEnd()
+      .trim(),
+  );
+  const first = blocks[0] ?? null;
+  const none = first !== null && /^NONE$/.test(first);
+  return {
+    declared: first !== null,
+    none,
+    text: first === null || none ? null : first,
+    blocks: blocks.length,
+  };
+}
+
+/**
+ * What the subject says the change is.
+ *
+ * The type decides the section, so a note declared in the block carries prose
+ * only and nothing is declared in two places. A subject that follows no
+ * convention leaves every field null, and the diff is all there is.
+ */
+export function declaredType(subject, body) {
+  const match = SUBJECT.exec((subject ?? "").trim());
+  const footer = /^BREAKING CHANGE:\s*(.*)$/m.exec(body ?? "");
+  const type = match ? match[1].toLowerCase() : null;
+  return {
+    type,
+    scope: match && match[2] ? match[2] : null,
+    known: type !== null && Object.hasOwn(SECTIONS, type),
+    section: type !== null ? (SECTIONS[type] ?? null) : null,
+    breaking: Boolean(match && match[3]) || footer !== null,
+    breakingSaysHow: footer !== null && footer[1].trim() !== "",
+  };
+}
+
 /** An error with a message meant for the user rather than a stack trace. */
 class HelperError extends Error {
   constructor(message, code = EXIT_ERROR) {
@@ -260,11 +339,14 @@ export function evidenceFor(cwd, sha) {
 
   const lines = patch === "" ? 0 : patch.trimEnd().split("\n").length;
   const tooLong = lines > PATCH_LINE_LIMIT;
+  const body = rest.join(FIELD).trim();
 
   return {
     sha: full.trim(),
     subject,
-    body: rest.join(FIELD).trim(),
+    body,
+    declares: declaredType(subject, body),
+    note: releaseNote(body),
     merge,
     stat: stat.trim(),
     files: names
@@ -300,7 +382,11 @@ export function pullRequestsFor(cwd, sha) {
     return { pullRequests: null, why: said || "gh could not be run" };
   }
   try {
-    return { pullRequests: JSON.parse(result.stdout), why: null };
+    const pullRequests = JSON.parse(result.stdout).map((pull) => ({
+      ...pull,
+      note: releaseNote(pull.body),
+    }));
+    return { pullRequests, why: null };
   } catch (error) {
     return { pullRequests: null, why: `gh printed no JSON: ${error.message}` };
   }
@@ -515,9 +601,12 @@ export function usage(invocation = "agent-notes.mjs") {
       publish.
 
   node ${invocation} evidence <sha> [--pr]
-      One commit's message, stat, file list and patch, as JSON. The patch is
-      omitted past ${PATCH_LINE_LIMIT} lines and the stat says how long it was.
-      --pr adds the pull requests it landed through, at one API call.
+      One commit's message, stat, file list and patch, as JSON, with what the
+      change declares about itself: the type and scope from the subject, and
+      the release-note block if it has one. The patch is omitted past
+      ${PATCH_LINE_LIMIT} lines and the stat says how long it was.
+      --pr adds the pull requests it landed through, each with its own block,
+      at one API call.
 
   node ${invocation} write <version> [--at <rev>]
       Reads the body from the scratch file, puts it in CHANGELOG.md under

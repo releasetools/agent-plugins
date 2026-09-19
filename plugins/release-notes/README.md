@@ -52,6 +52,31 @@ pull request body.
 | `/release-notes:draft <version> [--path <dir>]` | Rule on every commit, then write the entry |
 | `/release-notes:help`                           | What the plugin does, and what it will not |
 
+## A note the author wrote
+
+A change can carry its own release note, in a fenced block in its commit
+message or pull request description:
+
+````markdown
+```release-note
+Batch mode processes up to 10,000 records per request. Enable it with the
+batch=true query parameter.
+```
+````
+
+That note is what gets published, taken as written, because the person who
+wrote it was there. `NONE` in the block says a reader can observe nothing, and
+the commit is ruled that way without its patch being read. A change with no
+block is drafted from its diff, and the ruling table says which of the two
+each row came from.
+
+The [releasetools conventions](https://github.com/releasetools/conventions)
+define the block, and the subject's
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) type
+supplies the category: a `feat` lands under `Added`, a `fix` under `Fixed`,
+and a `!` or a `BREAKING CHANGE:` footer makes it breaking. None of that is
+guessed from the prose.
+
 ## One subtree, or the whole repository
 
 `--path <dir>` releases a subtree: a plugin in a monorepo, a package in a

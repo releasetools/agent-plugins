@@ -25,9 +25,11 @@ import * as notes from "../plugins/release-notes/skills/release-notes/agent-note
 const {
   PATCH_LINE_LIMIT,
   changelogVersions,
+  declaredType,
   insertSection,
   main,
   readVersion,
+  releaseNote,
   scratchPath,
   today,
 } = notes;
@@ -211,6 +213,130 @@ describe("one commit's evidence", () => {
     expect(Object.keys(json(root, ["evidence", "HEAD"]))).not.toContain(
       "author",
     );
+  });
+});
+
+describe("what a change declares about itself", () => {
+  const NOTE = [
+    "feat(api): batch mode",
+    "",
+    "Reviewer prose that is not the note.",
+    "",
+    "```release-note",
+    "Batch mode processes up to 10,000 records per request. Enable it with",
+    "the batch=true query parameter.",
+    "```",
+    "",
+    "More prose after it.",
+  ].join("\n");
+
+  it("hands over the note the author wrote, and nothing around it", () => {
+    const root = repository();
+    commit(root, NOTE, { "api.txt": "batch = true\n" });
+
+    const evidence = json(root, ["evidence", "HEAD"]);
+
+    expect(evidence.note.declared).toBe(true);
+    expect(evidence.note.none).toBe(false);
+    expect(evidence.note.text).toBe(
+      "Batch mode processes up to 10,000 records per request. Enable it with\nthe batch=true query parameter.",
+    );
+    expect(evidence.note.text).not.toContain("Reviewer prose");
+  });
+
+  it("reads NONE as an answer rather than a missing block", () => {
+    const root = repository();
+    commit(root, "refactor: extract the parser\n\n```release-note\nNONE\n```", {
+      "parser.txt": "one\n",
+    });
+
+    const evidence = json(root, ["evidence", "HEAD"]);
+
+    expect(evidence.note.declared).toBe(true);
+    expect(evidence.note.none).toBe(true);
+    expect(evidence.note.text).toBeNull();
+  });
+
+  it("says when a change declared none, so the diff is all there is", () => {
+    const root = repository();
+    commit(root, "fix: refuse a bad ref", { "cli.txt": "one\n" });
+
+    const evidence = json(root, ["evidence", "HEAD"]);
+
+    expect(evidence.note).toEqual({
+      declared: false,
+      none: false,
+      text: null,
+      blocks: 0,
+    });
+  });
+
+  it("counts a second block rather than merging it", () => {
+    const note = "```release-note\nOne.\n```\n\n```release-note\nTwo.\n```";
+
+    expect(releaseNote(note)).toEqual({
+      declared: true,
+      none: false,
+      text: "One.",
+      blocks: 2,
+    });
+  });
+
+  it("never reads a note out of prose nobody fenced", () => {
+    expect(releaseNote("release-note: batch mode is faster").declared).toBe(
+      false,
+    );
+    expect(releaseNote("```text\nBatch mode.\n```").declared).toBe(false);
+  });
+
+  it("reads the section and the breaking marker off the subject", () => {
+    const root = repository();
+    commit(
+      root,
+      "feat(cli)!: rename the output\n\nBREAKING CHANGE: use --json instead of --format json",
+      { "cli.txt": "json\n" },
+    );
+
+    const evidence = json(root, ["evidence", "HEAD"]);
+
+    expect(evidence.declares).toEqual({
+      type: "feat",
+      scope: "cli",
+      known: true,
+      section: "Added",
+      breaking: true,
+      breakingSaysHow: true,
+    });
+  });
+
+  it("leaves a subject that follows no convention with nothing declared", () => {
+    expect(declaredType("Refuse where it used to delete", "")).toEqual({
+      type: null,
+      scope: null,
+      known: false,
+      section: null,
+      breaking: false,
+      breakingSaysHow: false,
+    });
+  });
+
+  it("keeps an unknown type, and gives it no section", () => {
+    const declared = declaredType("wip: something", "");
+
+    expect(declared.type).toBe("wip");
+    expect(declared.known).toBe(false);
+    expect(declared.section).toBeNull();
+  });
+
+  it("takes a breaking marker from either the subject or the footer", () => {
+    expect(declaredType("fix!: drop the flag", "").breaking).toBe(true);
+    expect(
+      declaredType("fix: drop the flag", "BREAKING CHANGE: pass --keep")
+        .breaking,
+    ).toBe(true);
+    expect(
+      declaredType("fix: drop the flag", "BREAKING CHANGE:").breakingSaysHow,
+    ).toBe(false);
   });
 });
 
