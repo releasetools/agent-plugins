@@ -435,6 +435,18 @@ conventions:
     expect(() => readConfig(root)).toThrow(/\.releasetools\.yml is not read/);
   });
 
+  it("carries the command that sets a project's version, without running it", () => {
+    const root = repository();
+    declare(
+      root,
+      "projects:\n  - path: ./\n    manifest: package.json\n    bump: npm version {version} --no-git-tag-version\n",
+    );
+
+    expect(readConfig(root).groups[0].bump).toBe(
+      "npm version {version} --no-git-tag-version",
+    );
+  });
+
   it("resolves a glob to the directories that are there", () => {
     const root = repository();
     declare(

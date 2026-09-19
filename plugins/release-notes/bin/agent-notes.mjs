@@ -568,6 +568,7 @@ export function readConfig(cwd) {
             path: group.path,
             manifest: group.manifest ?? [],
             changelog: group.changelog ?? null,
+            bump: group.bump ?? null,
           }))
         : defaults(true).groups,
     ignoreFiles: declared.ignoreFiles ?? IGNORED,
@@ -608,6 +609,7 @@ export function projectsIn(root, config) {
           path: directory,
           label: directory === "" ? path.basename(root) : directory,
           changelog: group.changelog,
+          bump: group.bump ?? null,
           manifests,
         });
       }
@@ -1126,6 +1128,9 @@ function scope(shared) {
       return {
         path: project.path,
         label: project.label,
+        // What sets this project's version, for whatever coordinates a
+        // release. This never runs it.
+        bump: project.bump ?? null,
         changelog: project.changelog
           ? path.join(root, project.path, project.changelog)
           : null,

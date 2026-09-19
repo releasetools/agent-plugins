@@ -228,7 +228,7 @@ function settingsFrom(text, where = CONFIG_FILE) {
   };
 }
 
-const KEYS = ['path', 'manifest', 'changelog'];
+const KEYS = ['path', 'manifest', 'changelog', 'bump'];
 
 /** The groups of projects a repository holds. */
 function projectsFrom(value, where) {
@@ -265,6 +265,18 @@ function group(entry, where) {
   const manifest = strings(entry['manifest'], `${where} manifest`);
   manifest.forEach((value) => inside(value, `${where} manifest`));
 
+  const bump = entry['bump'];
+  if (bump !== undefined && bump !== null && typeof bump !== 'string') {
+    throw new ConfigError(`${where} bump must be the command that sets the version`);
+  }
+  const bumps = typeof bump === 'string' ? bump.trim() : '';
+  if (bumps !== '' && !bumps.includes('{version}')) {
+    throw new ConfigError(
+      `${where} bump must say where the version goes, as {version}, for example ` +
+        "'uv version {version}'",
+    );
+  }
+
   const changelog = entry['changelog'];
   if (changelog !== undefined && changelog !== null && typeof changelog !== 'string') {
     throw new ConfigError(`${where} changelog must be the name of one file`);
@@ -278,6 +290,7 @@ function group(entry, where) {
     path: paths,
     ...(manifest.length > 0 ? { manifest } : {}),
     ...(named !== '' ? { changelog: named } : {}),
+    ...(bumps !== '' ? { bump: bumps } : {}),
   };
 }
 
