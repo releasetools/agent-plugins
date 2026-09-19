@@ -40,7 +40,19 @@ own block.
 `/release-notes:draft` still runs, says the new name once and does the work,
 so a repository whose own release notes point at the old one keeps working.
 
+`.releasetools.yaml` is read by the same code the release guards in
+[releasetools/actions](https://github.com/releasetools/actions) read it with,
+carried here byte for byte, so a file one of them accepts is a file the other
+accepts. It reads the subset of YAML the format is written in and refuses the
+rest by name and line.
+
 ### Choices
+
+One reader, vendored rather than depended on. A plugin installs as a clone of
+its marketplace and never runs `npm install`, so a dependency would not be
+there to import. Two implementations would be two answers to which project a
+change belongs to, and the one that disagrees writes a note into the wrong
+changelog.
 
 The note beats the diff, rather than being merged with it. An author who wrote
 one was there; a reader of the patch is inferring. The diff still overrules a

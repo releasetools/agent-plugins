@@ -17,6 +17,7 @@
 
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -513,206 +514,25 @@ export function insertSection(text, heading, body) {
 /**
  * The declaration every releasetools tool reads.
  *
- * The guards in releasetools/actions read the same file, and the shape both
- * follow is written down in the conventions rather than in either of them:
- * https://github.com/releasetools/conventions/blob/main/FORMAT.md
+ * `releasetools-config.cjs` beside this file is @releasetools/config, byte for
+ * byte, carried from releasetools/actions rather than reimplemented: the
+ * guards there and this plugin have to give the same answer to which project a
+ * change belongs to, or a note lands in the wrong changelog. A plugin installs
+ * as a clone of its marketplace and never runs `npm install`, which is why it
+ * is a file here rather than a dependency. Only the extension differs, because
+ * this repository is ESM and the file is CommonJS.
  */
-const CONFIG_FILENAME = ".releasetools.yaml";
-const MISSPELLED = ".releasetools.yml";
+const {
+  CONFIG_FILE: CONFIG_FILENAME,
+  ConfigError,
+  IGNORED,
+  MANIFESTS,
+  MISSPELLED,
+  parseYaml,
+  settingsFrom,
+} = createRequire(import.meta.url)("./releasetools-config.cjs");
 
-/** Files a project may keep its version in, where a group names none. */
-const MANIFESTS = ["package.json", "pyproject.toml", "Cargo.toml", "VERSION"];
-
-/** Edits that are a release writing itself down rather than a change. */
-const IGNORED = ["CHANGELOG.md", "README.md", "LICENSE"];
-
-/**
- * A YAML reader for the subset this file is written in.
- *
- * Mappings, lists, scalars and flow lists of scalars, which is everything the
- * format uses. Anything else is refused by name rather than guessed at: a
- * declaration read wrongly sends a note to the wrong changelog, which is the
- * one failure this whole command exists to prevent.
- */
-export function parseYaml(text) {
-  const lines = [];
-  text.split("\n").forEach((raw, index) => {
-    const number = index + 1;
-    if (/^\s*\t/.test(raw)) {
-      throw new HelperError(
-        `${CONFIG_FILENAME} line ${number}: YAML indents with spaces`,
-      );
-    }
-    const stripped = stripComment(raw);
-    if (stripped.trim() === "") {
-      return;
-    }
-    if (/^\s*(---|\.\.\.)\s*$/.test(stripped)) {
-      return;
-    }
-    lines.push({
-      indent: stripped.length - stripped.trimStart().length,
-      text: stripped.trim(),
-      number,
-    });
-  });
-
-  if (lines.length === 0) {
-    return {};
-  }
-  const [value, next] = parseBlock(lines, 0, lines[0].indent);
-  if (next < lines.length) {
-    throw new HelperError(
-      `${CONFIG_FILENAME} line ${lines[next].number}: indented unlike the lines above it`,
-    );
-  }
-  return value;
-}
-
-/** Drops a comment, leaving a `#` that is inside quotes alone. */
-function stripComment(line) {
-  let quote = null;
-  for (let index = 0; index < line.length; index += 1) {
-    const character = line[index];
-    if (quote) {
-      if (character === quote) {
-        quote = null;
-      }
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      quote = character;
-      continue;
-    }
-    if (character === "#" && (index === 0 || /\s/.test(line[index - 1]))) {
-      return line.slice(0, index);
-    }
-  }
-  return line;
-}
-
-function parseBlock(lines, start, indent) {
-  return lines[start].text.startsWith("-")
-    ? parseSequence(lines, start, indent)
-    : parseMapping(lines, start, indent);
-}
-
-function parseSequence(lines, start, indent) {
-  const items = [];
-  let index = start;
-  while (
-    index < lines.length &&
-    lines[index].indent === indent &&
-    lines[index].text.startsWith("-")
-  ) {
-    const line = lines[index];
-    const item = line.text.replace(/^-\s*/, "");
-    index += 1;
-    if (item === "") {
-      if (index < lines.length && lines[index].indent > indent) {
-        const [value, next] = parseBlock(lines, index, lines[index].indent);
-        items.push(value);
-        index = next;
-        continue;
-      }
-      items.push(null);
-      continue;
-    }
-    if (isPair(item)) {
-      // `- key: value`, whose siblings are indented to where the key starts.
-      const inner =
-        indent + (line.text.length - line.text.replace(/^-\s*/, "").length);
-      const virtual = [{ indent: inner, text: item, number: line.number }];
-      while (
-        index < lines.length &&
-        lines[index].indent >= inner &&
-        lines[index].indent > indent
-      ) {
-        virtual.push(lines[index]);
-        index += 1;
-      }
-      const [value, next] = parseMapping(virtual, 0, inner);
-      if (next < virtual.length) {
-        throw new HelperError(
-          `${CONFIG_FILENAME} line ${virtual[next].number}: indented unlike the lines above it`,
-        );
-      }
-      items.push(value);
-      continue;
-    }
-    items.push(scalar(item, line.number));
-  }
-  return [items, index];
-}
-
-function parseMapping(lines, start, indent) {
-  const mapping = {};
-  let index = start;
-  while (index < lines.length && lines[index].indent === indent) {
-    const line = lines[index];
-    if (line.text.startsWith("-")) {
-      break;
-    }
-    if (!isPair(line.text)) {
-      throw new HelperError(
-        `${CONFIG_FILENAME} line ${line.number}: expected 'key: value'`,
-      );
-    }
-    const at = line.text.indexOf(":");
-    const key = unquote(line.text.slice(0, at).trim());
-    const rest = line.text.slice(at + 1).trim();
-    index += 1;
-
-    if (rest !== "") {
-      mapping[key] = scalar(rest, line.number);
-      continue;
-    }
-    if (index < lines.length && lines[index].indent > indent) {
-      const [value, next] = parseBlock(lines, index, lines[index].indent);
-      mapping[key] = value;
-      index = next;
-      continue;
-    }
-    mapping[key] = null;
-  }
-  return [mapping, index];
-}
-
-/** A `key: value` line, rather than a scalar that happens to hold a colon. */
-function isPair(text) {
-  const at = text.indexOf(":");
-  if (at === -1) {
-    return false;
-  }
-  const after = text[at + 1];
-  return after === undefined || after === " ";
-}
-
-function scalar(text, number) {
-  if (/^[&*!]/.test(text) || text === "|" || text === ">") {
-    throw new HelperError(
-      `${CONFIG_FILENAME} line ${number}: '${text}' is YAML this does not read`,
-    );
-  }
-  if (text.startsWith("[") && text.endsWith("]")) {
-    const inside = text.slice(1, -1).trim();
-    return inside === ""
-      ? []
-      : inside.split(",").map((item) => scalar(item.trim(), number));
-  }
-  if (text === "true" || text === "false") {
-    return text === "true";
-  }
-  if (text === "null" || text === "~") {
-    return null;
-  }
-  return unquote(text);
-}
-
-function unquote(text) {
-  const quoted = /^(["'])([\s\S]*)\1$/.exec(text);
-  return quoted ? quoted[2] : text;
-}
+export { parseYaml };
 
 /** What the repository declared, with the defaults the format names filled in. */
 export function readConfig(cwd) {
@@ -733,39 +553,26 @@ export function readConfig(cwd) {
     return defaults(false);
   }
 
-  const parsed = text.trim() === "" ? {} : parseYaml(text);
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new HelperError(`${CONFIG_FILENAME} must be a mapping of keys`);
+  let declared;
+  try {
+    declared = settingsFrom(text, CONFIG_FILENAME);
+  } catch (error) {
+    throw error instanceof ConfigError ? new HelperError(error.message) : error;
   }
-
-  const groups = (parsed.projects ?? [{ path: "./" }]).map((group, index) => {
-    if (group === null || typeof group !== "object" || Array.isArray(group)) {
-      throw new HelperError(
-        `${CONFIG_FILENAME} projects entry ${index + 1} needs a path`,
-      );
-    }
-    const paths = list(group.path);
-    if (paths.length === 0) {
-      throw new HelperError(
-        `${CONFIG_FILENAME} projects entry ${index + 1} needs a path`,
-      );
-    }
-    return {
-      path: paths,
-      manifest: list(group.manifest),
-      changelog: typeof group.changelog === "string" ? group.changelog : null,
-    };
-  });
 
   return {
     found: true,
-    groups,
-    ignoreFiles:
-      parsed["ignore-files"] === undefined
-        ? IGNORED
-        : list(parsed["ignore-files"]),
-    caseSensitive: parsed["case-sensitive"] === true,
-    except: list(parsed.conventions?.except),
+    groups:
+      declared.projects.length > 0
+        ? declared.projects.map((group) => ({
+            path: group.path,
+            manifest: group.manifest ?? [],
+            changelog: group.changelog ?? null,
+          }))
+        : defaults(true).groups,
+    ignoreFiles: declared.ignoreFiles ?? IGNORED,
+    caseSensitive: declared.caseSensitive,
+    except: declared.except,
   };
 }
 
@@ -777,21 +584,6 @@ function defaults(found) {
     caseSensitive: false,
     except: [],
   };
-}
-
-function list(value) {
-  if (value === undefined || value === null) {
-    return [];
-  }
-  if (typeof value === "string") {
-    return value.trim() === "" ? [] : [value.trim()];
-  }
-  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
-    return value.map((item) => item.trim()).filter((item) => item !== "");
-  }
-  throw new HelperError(
-    `${CONFIG_FILENAME}: expected one name or a list of them`,
-  );
 }
 
 /**

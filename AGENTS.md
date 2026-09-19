@@ -151,6 +151,11 @@ what stops it being written in the first place.
 
 ## release-notes, and the git it reads
 
+`plugins/release-notes/bin/releasetools-config.cjs` is `@releasetools/config` from
+`releasetools/actions`, carried here byte for byte: the guards there and this
+plugin have to answer the same way about which project a change belongs to.
+Change it there, then copy it.
+
 `plugins/release-notes/bin/agent-notes.mjs` shells out to
 `git`, and to `gh` only behind `--pr`. Neither is pinned and neither is
 installed by the plugin, so there is no released version to check a change
