@@ -151,7 +151,7 @@ what stops it being written in the first place.
 
 ## release-notes, and the git it reads
 
-`plugins/release-notes/skills/release-notes/agent-notes.mjs` shells out to
+`plugins/release-notes/bin/agent-notes.mjs` shells out to
 `git`, and to `gh` only behind `--pr`. Neither is pinned and neither is
 installed by the plugin, so there is no released version to check a change
 against the way mutex needs one.

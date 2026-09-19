@@ -1,14 +1,11 @@
 ---
 name: release-notes
 description: >
-  Draft a version's changelog entry from the commits since the last tag,
-  ruling on each commit against one test, then write it to CHANGELOG.md and
-  to the release body file. Use before tagging a release, when asked for
-  release notes, a changelog entry or the body of a GitHub release, when
-  asked what changed since the last release, or as a step in a repository's
-  own release procedure. Triggers on: release notes, changelog entry, what
-  changed since the last release, write the release body, draft the notes
-  for x.y.z.
+  What a release note is, and the one test that decides whether a change
+  has one. Read by both of this plugin's commands and by anything else
+  writing an entry: /release-notes:write for one change, and
+  /release-notes:prepare for a release. Triggers on: release note,
+  changelog entry, what a reader can observe, what goes in a release.
 ---
 
 # release-notes: what a reader can observe
@@ -46,126 +43,57 @@ bumps, which is exactly the judgment a collapse rule needs.
 So coverage is never decided by feel. It is decided per commit, against the
 test above, and the decision stays visible.
 
-## The three passes
+## The block a change declares
 
-**Pass 1, scope.** One call, which also clears the scratch file:
+A change declares its own note in a fenced block in its description, which is
+`note-or-none` in the
+[releasetools conventions](https://github.com/releasetools/conventions):
 
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/release-notes/agent-notes.mjs" commits
+````markdown
+```release-note
+Batch mode processes up to 10,000 records per request. Enable it with the
+batch=true query parameter.
 ```
+````
 
-It prints the previous tag, the range, and a row per commit. When
-`firstRelease` is true nothing has been released yet, the range is the whole
-history, and the entry describes what the software does rather than what
-changed in it.
-
-Add `--path <dir>` when the thing being released is a subtree rather than the
-repository: a plugin in a monorepo, a package in a workspace. The range then
-covers only the commits that touched it, the entry lands in
-`<dir>/CHANGELOG.md`, and the scratch file is its own. A subtree is usually
-versioned on its own rather than tagged, so pass `--since` with it.
-
-A repository can keep both: one changelog per released thing and another for
-itself. They are drafted separately and nothing reconciles them. The
-repository's entry can summarise what four subtree entries said, or say
-something none of them did.
-
-**Pass 2, rule on each commit.** One call per commit:
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/release-notes/agent-notes.mjs" evidence <sha>
-```
-
-Then one row per commit, and show the table:
-
-| Field         | What goes in it                                                 |
-| ------------- | --------------------------------------------------------------- |
-| `sha`         | as printed                                                      |
-| `source`      | `note`, `NONE` or `diff`, from the rule below                   |
-| `observable`  | yes or no, against the test above                               |
-| `category`    | one of the six below, or none                                   |
-| `breaking`    | yes or no                                                       |
-| `entry`       | one sentence: what a person running it sees differently         |
-| `evidence`    | the paths in the diff that show it                              |
-| `discrepancy` | where the message and the diff disagree, empty when they do not |
-
-`discrepancy` is the row that earns the diff. A commit message is a claim and
-the patch is the evidence: a commit saying "fix typo" that also moves a
-default is caught here or nowhere. Say what the diff shows and rule on that,
-not on the message.
-
-### Where the entry comes from
-
-`note` in the evidence says whether the author wrote one. Three cases, and
-`source` records which one each commit was:
-
-| `note`                       | `source` | what to do                                       |
-| ---------------------------- | -------- | ------------------------------------------------ |
-| `declared: true`, has `text` | `note`   | the entry is that text, as written               |
-| `none: true`                 | `NONE`   | `observable` is no, and there is no entry        |
-| `declared: false`            | `diff`   | rule from the patch and write the entry yourself |
+| what the change carries | what it means                                       |
+| ----------------------- | --------------------------------------------------- |
+| a block with prose      | that prose is the note, as written                  |
+| a block saying `NONE`   | a reader can observe nothing, and there is no entry |
+| no block                | rule from the diff, and write the note yourself     |
 
 A declared note is the author's own words about their own change, written
-when they still knew why, so take it as written. Fit it to the section and
-fix a typo; do not rewrite it into your own voice, and do not expand it from
-the diff.
+while they still knew why. Take it as written. Fit it to a section, fix a
+typo, and do not rewrite it into your own voice or expand it from the diff.
 
-Overrule a note only when the diff contradicts it, and then say so in
-`discrepancy` rather than editing the note quietly. A note claiming a new flag
-that no diff adds is the case this catches.
+Overrule a note only when the diff contradicts it, and then say so rather than
+editing it quietly. A note claiming a flag that no diff adds is the case this
+catches.
 
-`NONE` is an answer and not a missing block, so a commit carrying it needs no
-reading of the patch. It stays in the table as a ruled row.
+The subject carries the rest. A Conventional Commits type decides the
+category, so `feat` lands under `Added` and `fix` under `Fixed`, and a `!` or
+a `BREAKING CHANGE:` footer decides whether it is breaking. None of that is
+declared in the block, and none of it is guessed from the prose.
 
-`declares` carries what the subject said: `type`, `scope`, `section` and
-`breaking`. Where a type is known, its `section` is the category, so `feat`
-lands under `Added` and `fix` under `Fixed`, and `breaking` is already
-decided by a `!` or a `BREAKING CHANGE:` footer. Do not re-derive either from
-the prose. A commit whose subject follows no convention leaves them null, and
-the diff is all there is.
+Two blocks in one description is a change that needed splitting. Take the
+first and say so.
 
-`blocks` above 1 is a change that needed splitting and was not, which
-[the format](https://github.com/releasetools/conventions/blob/main/FORMAT.md)
-refuses. Take the first block, and say so in `discrepancy`.
+## Where a note lives
 
-With `--pr`, each pull request carries its own `note`. A block in the pull
-request counts the same as one in the commit; where both exist and differ,
-the commit's is the later word and the difference is a `discrepancy`.
+A note is written once and copied. Only one of the copies is durable, and
+that is the commit that lands on the default branch: a pull request body is
+editable by anyone and a scratch file is gone with the worktree.
 
-`patch` comes back null on a large commit, with `patchOmitted` giving its
-length. Rule from the stat and the file list; a diff that long is a rewrite,
-a generated file or a first commit, and reading it line by line changes
-nothing.
+| stage       | who writes it                              | where it lands                                                            |
+| ----------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| the change  | `/release-notes:write`                     | `$GIT_DIR/NOTE_EDITMSG`, then the block in the pull request's description |
+| the merge   | whatever merges, `origin:merge` among them | the block in the commit body on the default branch                        |
+| the release | `/release-notes:prepare`                   | the changelog section, and `$GIT_DIR/RELEASE_EDITMSG`                     |
+| the publish | the release workflow                       | the release body                                                          |
 
-Add `--pr` to fetch the pull requests a commit landed through. Try it on one
-commit first: under squash merges the commit body already is the pull request
-body, and then it costs an API call per commit and adds nothing.
-
-**Pass 3, write.** Only from the rows where `observable` is yes, and from
-`entry` as the table holds it.
-
-Collapse a class only when a member of it is observable. Nine dependency
-bumps that change no behaviour are not one shorter entry, they are no entry.
-Several commits producing one observable change are one entry, and a merge
-commit and the commits under it are one change.
-
-Write the body to the `scratchFile` path from pass 1, show it to the user,
-then:
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/release-notes/agent-notes.mjs" write <version>
-```
-
-That puts it in `CHANGELOG.md` under `## <version> - <date>`, above every
-older release and below the preamble, and leaves the same bytes in the
-scratch file for whatever publishes the release. It refuses a version the
-changelog already carries. Pass the same `--path` you passed to `commits`, or
-the entry lands in the wrong file.
-
-The date is today, which is right for a release being cut now and wrong for
-one written up afterwards. `--at <rev>` dates the entry from that commit
-instead, so a version released in August and written up in September is dated
-August. Name the commit that released the version, not the one you are on.
+Write it at the earliest stage that has the author's context, which is the
+first row. The rows below it are fallbacks: a change that arrives at a release
+with no block is ruled from its diff, which works and is worse.
 
 ## The shape of an entry
 
