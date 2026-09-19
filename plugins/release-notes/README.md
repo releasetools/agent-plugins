@@ -64,6 +64,21 @@ usually versioned on its own rather than tagged, so pass `--since` with it.
 /release-notes:draft 0.3.0 --path plugins/release-notes
 ```
 
+## A release written up after the fact
+
+An entry is dated today, which is right for a release being cut now. `--at
+<rev>` dates it from that commit instead, so a version released in August and
+written up in September is dated August. It is the way to give a subtree that
+was versioned before it kept a changelog one section per version, each dated
+from the commit that released it.
+
+```shell
+/release-notes:draft 0.1.0 --path plugins/mutex --since v0.0.9 --at eb4814e
+```
+
+A date read off a commit cannot be mistyped, and cannot contradict the history
+the entry describes.
+
 A repository can keep both kinds: one changelog per released thing, and one
 for itself. They are drafted separately and nothing reconciles them, so the
 repository's entry can summarise what the subtree entries said or say

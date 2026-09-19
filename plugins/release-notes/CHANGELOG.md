@@ -5,6 +5,16 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.3.2 - 2026-09-18
+
+`--at <rev>` dates an entry from that commit rather than today, for a release
+written up after the fact. A plugin released in August and documented in
+September is dated August, and a date read off a commit cannot be mistyped or
+contradict the history the entry describes.
+
+It is what gives a subtree that was versioned before it kept a changelog one
+section per version, each dated from the commit that released it.
+
 ## 0.3.1 - 2026-09-18
 
 The plugin carries this changelog. Nothing about running it changed: the
