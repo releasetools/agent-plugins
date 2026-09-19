@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "release-notes",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Draft a release's changelog entry from the commits since the last tag",
   "author": {
     "name": "ReleaseTools",
