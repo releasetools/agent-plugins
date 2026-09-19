@@ -47,6 +47,27 @@
         "git",
         "semver"
       ]
+    },
+    {
+      "name": "release",
+      "source": "./plugins/release",
+      "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
+      "version": "0.1.0",
+      "author": {
+        "name": "ReleaseTools",
+        "url": "https://github.com/releasetools"
+      },
+      "homepage": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release#readme",
+      "repository": "https://github.com/releasetools/agent-plugins",
+      "license": "Apache-2.0",
+      "keywords": [
+        "release",
+        "semver",
+        "changelog",
+        "git",
+        "github",
+        "tag"
+      ]
     }
   ]
 }

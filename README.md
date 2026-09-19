@@ -39,6 +39,7 @@ hermes plugins install releasetools/agent-plugins/plugins/release-notes
 | --------------- | --------------------------------------------------------------------- |
 | `mutex`         | Guard a shared resource with a distributed lock, using the mutex CLI  |
 | `release-notes` | Draft a release's changelog entry from the commits since the last tag |
+| `release`       | Cut a release: prechecks, notes, bump, pull request, merge, tag       |
 
 The plugins live here: `plugins/<name>/` is the source, not a copy of one, and
 a merge to `main` is the release. See [AGENTS.md](./AGENTS.md) for how to change
