@@ -523,18 +523,26 @@ export function insertSection(text, heading, body) {
  * this repository is ESM and the file is CommonJS.
  */
 const {
+  ABSENT,
   CONFIG_FILE: CONFIG_FILENAME,
   ConfigError,
   IGNORED,
-  MANIFESTS,
   MISSPELLED,
   parseYaml,
   settingsFrom,
 } = createRequire(import.meta.url)("./releasetools-config.cjs");
 
+export { ABSENT };
+
 export { parseYaml };
 
-/** What the repository declared, with the defaults the format names filled in. */
+/**
+ * What the repository declared.
+ *
+ * `found` is false where there is no file. Nothing is guessed from the tree:
+ * a note written into a changelog nobody named is worse than one nobody
+ * wrote, so the commands say so and stop.
+ */
 export function readConfig(cwd) {
   const root = repositoryRoot(cwd);
   let text;
@@ -547,10 +555,16 @@ export function readConfig(cwd) {
     if (fs.existsSync(path.join(root, MISSPELLED))) {
       throw new HelperError(
         `${MISSPELLED} is not read. The file is ${CONFIG_FILENAME}; rename it, or this ` +
-          "writes to the changelog at the repository root.",
+          "has nothing to write to.",
       );
     }
-    return defaults(false);
+    return {
+      found: false,
+      groups: [],
+      ignoreFiles: IGNORED,
+      caseSensitive: false,
+      except: [],
+    };
   }
 
   let declared;
@@ -561,29 +575,16 @@ export function readConfig(cwd) {
   }
 
   return {
-    found: true,
-    groups:
-      declared.projects.length > 0
-        ? declared.projects.map((group) => ({
-            path: group.path,
-            manifest: group.manifest ?? [],
-            changelog: group.changelog ?? null,
-            bump: group.bump ?? null,
-          }))
-        : defaults(true).groups,
+    found: declared.projects.length > 0,
+    groups: declared.projects.map((group) => ({
+      path: group.path,
+      manifest: group.manifest,
+      changelog: group.changelog ?? null,
+      bump: group.bump ?? null,
+    })),
     ignoreFiles: declared.ignoreFiles ?? IGNORED,
     caseSensitive: declared.caseSensitive,
     except: declared.except,
-  };
-}
-
-function defaults(found) {
-  return {
-    found,
-    groups: [{ path: ["./"], manifest: [], changelog: null }],
-    ignoreFiles: IGNORED,
-    caseSensitive: false,
-    except: [],
   };
 }
 
@@ -597,14 +598,23 @@ function defaults(found) {
 export function projectsIn(root, config) {
   const found = new Map();
   for (const group of config.groups) {
-    for (const pattern of group.path) {
-      for (const directory of expand(root, pattern)) {
+    for (const declared of group.path) {
+      const directory = declared
+        .replace(/^\.\//, "")
+        .replace(/\/$/, "")
+        .replace(/^\.$/, "");
+      {
         if (found.has(directory)) {
           continue;
         }
-        const manifests = (
-          group.manifest.length > 0 ? group.manifest : MANIFESTS
-        ).filter((name) => fs.existsSync(path.join(root, directory, name)));
+        if (!fs.existsSync(path.join(root, directory))) {
+          throw new HelperError(
+            `${CONFIG_FILENAME} names ${declared}, which is not a directory in this repository`,
+          );
+        }
+        const manifests = group.manifest.filter((name) =>
+          fs.existsSync(path.join(root, directory, name)),
+        );
         found.set(directory, {
           path: directory,
           label: directory === "" ? path.basename(root) : directory,
@@ -618,34 +628,6 @@ export function projectsIn(root, config) {
   return [...found.values()].sort((one, other) =>
     one.path.localeCompare(other.path),
   );
-}
-
-/** One directory, or the directories a trailing `*` names. */
-function expand(root, pattern) {
-  const cleaned = pattern.replace(/^\.\//, "").replace(/\/$/, "");
-  if (cleaned === "" || cleaned === ".") {
-    return [""];
-  }
-  if (!cleaned.includes("*")) {
-    return fs.existsSync(path.join(root, cleaned)) ? [cleaned] : [];
-  }
-  const at = cleaned.lastIndexOf("/");
-  const parent = at === -1 ? "" : cleaned.slice(0, at);
-  const leaf = at === -1 ? cleaned : cleaned.slice(at + 1);
-  if (leaf !== "*") {
-    throw new HelperError(
-      `${CONFIG_FILENAME}: '${pattern}' is a pattern this does not read`,
-    );
-  }
-  let entries;
-  try {
-    entries = fs.readdirSync(path.join(root, parent), { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  return entries
-    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
-    .map((entry) => (parent === "" ? entry.name : `${parent}/${entry.name}`));
 }
 
 /**
@@ -1165,7 +1147,21 @@ function isReleased(cwd, project, version) {
 }
 
 function commandChange(shared) {
-  const { cwd, stdout } = shared;
+  const { cwd, stdout, stderr } = shared;
+  const config = readConfig(cwd);
+  if (!config.found) {
+    write(stderr, `agent-notes: ${ABSENT}`);
+    write(
+      stdout,
+      JSON.stringify(
+        { config: { file: CONFIG_FILENAME, found: false }, projects: [] },
+        null,
+        2,
+      ),
+    );
+    return EXIT_OK;
+  }
+
   const found = scope(shared);
   const noteFile = notePath(cwd);
   fs.writeFileSync(noteFile, "");
@@ -1201,7 +1197,21 @@ function commandChange(shared) {
 }
 
 function commandNote(shared) {
-  const { cwd, stdout } = shared;
+  const { cwd, stdout, stderr } = shared;
+  const declaredProjects = readConfig(cwd);
+  if (!declaredProjects.found) {
+    write(stderr, `agent-notes: ${ABSENT}`);
+    write(
+      stdout,
+      JSON.stringify(
+        { config: { file: CONFIG_FILENAME, found: false }, wrote: [] },
+        null,
+        2,
+      ),
+    );
+    return EXIT_OK;
+  }
+
   const noteFile = notePath(cwd);
   const drafted = shared.none ? "" : readNote(noteFile);
   const note = shared.none

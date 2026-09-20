@@ -65,7 +65,9 @@ Which projects those are, where each keeps its version and its changelog, and
 whether the repository writes entries per change at all are read from
 `.releasetools.yaml` at the repository root, the file every releasetools tool
 reads. A note that lands in the wrong package's changelog is worse than no
-note, and that file is what stands between the two.
+note, and that file is what stands between the two. A repository without one
+is told so and nothing is written; `npx @releasetools/config adopt` writes a
+starter.
 
 It never writes a manifest version. Where a project's version is one that was
 already released, it says so and names what the change asks for instead, and

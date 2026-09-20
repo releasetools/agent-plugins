@@ -18,11 +18,20 @@ const CONFIG_FILE = '.releasetools.yaml';
 /** The spelling somebody reaches for, which would otherwise be read as silence. */
 const MISSPELLED = '.releasetools.yml';
 
-/** Files a project may keep its version in, where a group names none. */
-const MANIFESTS = ['package.json', 'pyproject.toml', 'Cargo.toml', 'VERSION'];
-
 /** Edits that are a release writing itself down rather than a change. */
 const IGNORED = ['CHANGELOG.md', 'README.md', 'LICENSE'];
+
+/**
+ * What a tool says when the repository has declared nothing.
+ *
+ * Nothing is inferred from a tree: a run with no declaration checks nothing,
+ * says so, and stops, rather than guessing at a project and reporting on
+ * whatever it guessed.
+ */
+const ABSENT =
+  `no ${CONFIG_FILE} in this repository, so there is nothing to check. Declare the ` +
+  'projects it holds, each with the file that carries its version: ' +
+  'https://github.com/releasetools/conventions/blob/main/FORMAT.md';
 
 /** What the file said was wrong, in words meant for whoever wrote it. */
 class ConfigError extends Error {}
@@ -271,7 +280,7 @@ function projectsFrom(value, where) {
   if (!Array.isArray(value)) {
     throw new ConfigError(
       `${where} must be a list of entries, each with a path, for example:\n` +
-        '  projects:\n    - path: packages/*\n      manifest: package.json\n' +
+        '  projects:\n    - path: packages/api\n      manifest: package.json\n' +
         '      changelog: CHANGELOG.md',
     );
   }
@@ -296,6 +305,12 @@ function group(entry, where) {
   paths.forEach((value) => inside(value, `${where} path`));
 
   const manifest = strings(entry['manifest'], `${where} manifest`);
+  if (manifest.length === 0) {
+    throw new ConfigError(
+      `${where} needs a manifest: the file that carries this project's version, or the ` +
+        'files that carry it if more than one does. Nothing is guessed.',
+    );
+  }
   manifest.forEach((value) => inside(value, `${where} manifest`));
 
   const bump = entry['bump'];
@@ -321,7 +336,7 @@ function group(entry, where) {
 
   return {
     path: paths,
-    ...(manifest.length > 0 ? { manifest } : {}),
+    manifest,
     ...(named !== '' ? { changelog: named } : {}),
     ...(bumps !== '' ? { bump: bumps } : {}),
   };
@@ -340,6 +355,12 @@ function inside(value, where) {
   }
   if (value.split(/[\\/]/).some((segment) => segment === '..')) {
     throw new ConfigError(`${where} must be inside the repository, so no ..`);
+  }
+  if (/[*?[\]]/.test(value)) {
+    throw new ConfigError(
+      `${where} names one directory or file, not a pattern. List each project, ` +
+        'so what is checked is what the file says rather than what the tree happens to hold.',
+    );
   }
 }
 
@@ -379,9 +400,9 @@ function boolean(value, where) {
 }
 
 module.exports = {
+  ABSENT,
   CONFIG_FILE,
   MISSPELLED,
-  MANIFESTS,
   IGNORED,
   ConfigError,
   parseYaml,

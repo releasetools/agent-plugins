@@ -409,15 +409,15 @@ conventions:
     );
   });
 
-  it("falls back to the repository itself where there is no file", () => {
+  it("declares nothing where there is no file, so nothing is written", () => {
     const root = repository();
 
     const config = readConfig(root);
 
+    // A note written into a changelog nobody named is worse than one nobody
+    // wrote, so the commands say so and stop.
     expect(config.found).toBe(false);
-    expect(config.groups).toEqual([
-      { path: ["./"], manifest: [], changelog: null },
-    ]);
+    expect(config.groups).toEqual([]);
     expect(config.ignoreFiles).toEqual([
       "CHANGELOG.md",
       "README.md",
@@ -447,11 +447,11 @@ conventions:
     );
   });
 
-  it("resolves a glob to the directories that are there", () => {
+  it("resolves the directories the declaration names", () => {
     const root = repository();
     declare(
       root,
-      "projects:\n  - path: plugins/*\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+      "projects:\n  - path:\n      - plugins/one\n      - plugins/two\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
     );
     for (const name of ["one", "two"]) {
       fs.mkdirSync(path.join(root, "plugins", name), { recursive: true });
@@ -657,7 +657,7 @@ describe("one change, from the branch it is on", () => {
     const root = repository();
     declare(
       root,
-      "projects:\n  - path: plugins/*\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+      "projects:\n  - path: plugins/docket\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
     );
     project(root, "0.1.0", "# docket\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n");
     commit(root, "feat: the project", {});
@@ -680,7 +680,7 @@ describe("one change, from the branch it is on", () => {
     const root = repository();
     declare(
       root,
-      "projects:\n  - path: plugins/*\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+      "projects:\n  - path: plugins/docket\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
     );
     project(root, "0.2.0", "# docket\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n");
     commit(root, "feat: the project", {});
@@ -713,7 +713,7 @@ describe("one change, from the branch it is on", () => {
     const root = repository();
     declare(
       root,
-      "projects:\n  - path: plugins/*\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+      "projects:\n  - path: plugins/docket\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
     );
     project(root, "0.1.0", "# docket\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n");
     commit(root, "feat: the project", {});
@@ -738,7 +738,7 @@ describe("one change, from the branch it is on", () => {
     const root = repository();
     declare(
       root,
-      "projects:\n  - path: plugins/*\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+      "projects:\n  - path: plugins/docket\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
     );
     project(root, "0.2.0", "# docket\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n");
     commit(root, "feat: the project", {});
@@ -758,7 +758,7 @@ describe("one change, from the branch it is on", () => {
     const root = repository();
     declare(
       root,
-      "projects:\n  - path: plugins/*\n    manifest: plugin.json\n    changelog: CHANGELOG.md\nconventions:\n  except:\n    - changelog-per-change\n",
+      "projects:\n  - path: plugins/docket\n    manifest: plugin.json\n    changelog: CHANGELOG.md\nconventions:\n  except:\n    - changelog-per-change\n",
     );
     project(root, "0.2.0", "# docket\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n");
     commit(root, "feat: the project", {});
