@@ -31,21 +31,25 @@ projects:
 
 release:
   branch: main
+  merge: squash
   tag: v{version}
   checks: tests.yml
   publish: publish.yml
-  registry: https://pypi.org/pypi/worktrees/{version}/json
+  registry: https://pypi.org/pypi/my-package/{version}/json
 ```
 
 | key        | what it is                                           | default                            |
 | ---------- | ---------------------------------------------------- | ---------------------------------- |
 | `branch`   | what a release is cut from                           | `main`                             |
+| `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                           |
 | `tag`      | the tag's shape                                      | `v{version}`                       |
 | `checks`   | the workflow that must be green on the merged commit | none, and step 4 skips the wait    |
 | `publish`  | the workflow the tag starts, watched to the end      | none, and step 5 stops at the push |
 | `registry` | a URL that must 404 before releasing                 | none                               |
 
-`{version}` is the bare version everywhere, with no `v`.
+`{version}` is the bare version everywhere, with no `v`. `registry` names the
+distribution as the registry knows it, which is not always the repository's
+name or the package a reader imports.
 
 A repository declaring several projects releases one of them at a time. Take
 the one the user named, and ask when they named none rather than guessing.
@@ -66,10 +70,12 @@ free on the remote, that the version is after the newest release tag, that
 HEAD is on the release branch, and that the registry does not already carry
 it.
 
-`rt` is [releasetools/cli](https://github.com/releasetools/cli), installed
-with `brew install releasetools/tap/releasetools-cli`. Where it is missing,
-say so and stop: every check it runs refuses when it cannot prove what it was
-asked to prove, and doing them by hand is how one gets skipped.
+`rt` is [releasetools/cli](https://github.com/releasetools/cli), v0.4.0 or
+newer, installed with `brew install releasetools/tap/releasetools-cli`. Step 2
+needs `version::bump`, which arrived in v0.4.0, and `rt version` says which is
+here. Where it is missing or older, say so and stop: every check it runs
+refuses when it cannot prove what it was asked to prove, and doing them by hand
+is how one gets skipped.
 
 ## 2. The branch, the notes, and the bump
 
@@ -125,16 +131,23 @@ nothing published.
 ## 4. Merge, then wait for the branch
 
 ```bash
-gh pr merge --rebase --delete-branch
+gh pr merge --<merge> --delete-branch
 git switch <branch> && git pull --ff-only
 rt github::await_workflow "$(git rev-parse HEAD)" <checks>
 ```
 
-`--rebase` keeps the commit message rather than replacing it with the pull
-request title.
+`squash` where the repository declares nothing, because it is the only one a
+protected branch always takes: GitHub replays the author's commits unsigned on
+a rebase merge, so a branch requiring signed commits refuses it, and a branch
+requiring linear history refuses a merge commit. A squash is one commit, signed
+by GitHub's web-flow key, and its subject is the pull request's.
 
-The wait matters. A rebase onto a branch that moved is a tree neither side has
-tested, and a tag must only ever land on a commit already proved green.
+`rebase` keeps the branch's own commits and their messages, and `merge` keeps
+the branch as a branch. Declare either where the branch protections allow it.
+
+The wait matters. Whatever the strategy, what lands is a tree neither the
+branch nor the base has tested on its own, and a tag must only ever land on a
+commit already proved green.
 
 If it fails, the branch now carries the version bump and no release exists.
 Say so plainly. The fix is another pull request and then this skill again, at

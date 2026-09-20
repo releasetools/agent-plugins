@@ -2,6 +2,35 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+## 0.2.0 - 2026-09-21
+
+A release's pull request lands the way `.releasetools.yaml` says, in the
+`merge` key: `squash`, `rebase` or `merge`. It was `--rebase` for everybody
+before this, and `squash` where the file leaves it out.
+
+A branch requiring signed commits refuses a rebase merge, because GitHub
+replays the author's commits unsigned, and a branch requiring linear history
+refuses a merge commit. Squash is the only one both take, and
+[`signed-git`](https://github.com/releasetools/conventions/blob/main/conventions/signed-git.md)
+had already said so, so a repository declaring nothing was being cut against
+its own convention.
+
+The `rt` this needs is named: v0.4.0, where `version::bump` arrived. Step 2
+called it from the day this shipped, and an older `rt` answers
+`Invalid function name` there.
+
+The declaration example names `my-package` rather than a real distribution.
+`registry` is the name the registry knows, which is not always the
+repository's, and one copied from an example is checked against somebody
+else's package.
+
+### Choices
+
+The default changed rather than staying where it was. A key with a
+backwards-compatible default would have left every repository that declares
+nothing on the strategy its own conventions refuse, which is the reading
+nobody would choose if they were asked.
+
 ## 0.1.0 - 2026-09-20
 
 `/release:cut <version>` runs a release's steps in order: the prechecks, the
