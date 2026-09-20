@@ -4,13 +4,14 @@ This is where the plugins live. Editing one is an ordinary pull request: change
 the files under `plugins/<name>/`, bump its version, and the merge is the
 release. Nothing is copied in from anywhere else.
 
-Three kinds of file are generated and must not be hand-edited: the two
-catalogs, and each plugin's `plugin.json`. A fourth is carried rather than
-generated: `plugins/release-notes/bin/releasetools-config.cjs` is
-`@releasetools/config`, byte for byte, and `npm run validate` fails when it
-stops being that. Change it in
+Four kinds of file are generated and must not be hand-edited: the two
+catalogs, each plugin's `plugin.json`, and
+`plugins/release-notes/bin/releasetools-config.cjs`, which `npm run sync`
+copies from the `@releasetools/config` version pinned in `package.json`. A
+plugin installs as a clone of its marketplace and never runs `npm install`, so
+that reader cannot be a dependency at runtime. Change it in
 [releasetools/actions](https://github.com/releasetools/actions/tree/main/packages/config),
-publish, and copy it here.
+publish, bump the pin here, and run the sync.
 
 ## What is here
 
@@ -22,7 +23,6 @@ plugins/<name>/plugin.json        What every other agent reads  (generated)
 scripts/validate-plugin.mjs       One plugin's own layout
 scripts/validate-marketplaces.mjs What holds between the two catalogs
 scripts/sync-catalogs.mjs         Writes both catalogs from plugins/
-scripts/check-vendored.mjs        The reader carried from @releasetools/config
 scripts/catalogs.mjs              What all of those agree on
 .releasetools.yaml                What this repository holds, for every releasetools tool
 __tests__/                        Jest, run by `npm test`

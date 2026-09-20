@@ -16,6 +16,7 @@
  */
 
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import {
@@ -35,13 +36,26 @@ import {
 import { REPOSITORY_ROOT, validatePlugin } from "./validate-plugin.mjs";
 
 /**
+ * The reader the release-notes plugin carries, and where it comes from.
+ *
+ * A plugin installs as a clone of its marketplace and never runs `npm
+ * install`, so the file cannot be a dependency at runtime. It is generated
+ * here from the version pinned in package.json, like the catalogs: a copy
+ * that drifts means the plugin and the guards in releasetools/actions
+ * disagree about which project a change belongs to, which lands a release
+ * note in the wrong changelog.
+ */
+const VENDORED = `${PLUGINS_DIR}/release-notes/bin/releasetools-config.cjs`;
+
+/**
  * Rewrites both catalogs from the plugins in `plugins/`.
  *
  *     npm run sync           write them
  *     npm run sync -- --check   say whether they are already right
  *
- * Three kinds of file are generated: the two catalogs, and each plugin's
- * `plugin.json`. All of them are derived from that plugin's own manifests, in
+ * Four kinds of file are generated: the two catalogs, each plugin's
+ * `plugin.json`, and the reader the release-notes plugin carries. The first
+ * three are derived from that plugin's own manifests, in
  * the schema the reader expects, so no two agents can end up describing
  * different things - which is the failure no vendor's validator can see, since
  * each reads only its own file.
@@ -65,6 +79,7 @@ export function syncCatalogs({ root = REPOSITORY_ROOT, check = false } = {}) {
   const errors = [];
   const entries = {};
   const changed = [];
+  writeVendored(marketplace, changed, check);
   for (const name of plugins) {
     const at = path.join(directory, name);
 
@@ -132,6 +147,25 @@ export function syncCatalogs({ root = REPOSITORY_ROOT, check = false } = {}) {
  * file and why. Writing a portable manifest from a broken one would publish a
  * plugin the catalogs refuse to list.
  */
+/** Copies the published reader in, so the carried copy cannot drift. */
+function writeVendored(marketplace, changed, check) {
+  const at = path.join(marketplace, VENDORED);
+  if (!fs.existsSync(path.dirname(at))) {
+    return;
+  }
+  const published = createRequire(import.meta.url).resolve(
+    "@releasetools/config",
+  );
+  const wanted = fs.readFileSync(published, "utf8");
+  if (fs.existsSync(at) && fs.readFileSync(at, "utf8") === wanted) {
+    return;
+  }
+  changed.push(VENDORED);
+  if (!check) {
+    fs.writeFileSync(at, wanted);
+  }
+}
+
 function writePortable(at, label, changed, check) {
   let wanted;
   try {
@@ -179,7 +213,7 @@ if (
   }
   if (values.check) {
     process.stderr.write(
-      `${changed.join(" and ")} ${changed.length === 1 ? "is" : "are"} out of step with plugins/. Run \`npm run sync\`.\n`,
+      `${changed.join(" and ")} ${changed.length === 1 ? "is" : "are"} out of step. Run \`npm run sync\`.\n`,
     );
     process.exit(1);
   }
