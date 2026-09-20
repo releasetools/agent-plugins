@@ -36,6 +36,10 @@ Which projects, which changelogs and which conventions all come from
 a note that lands in the wrong package's changelog is worse than no note, and
 the file is the only thing standing between those two outcomes.
 
+`config.found` is false where the repository has no such file. Say that, say
+that `npx @releasetools/config adopt` writes a starter one, and stop. Nothing
+here guesses at a project.
+
 `--base <ref>` when the branch is not against the default branch. `--path
 <dir>` to act on one project when the change touched several.
 

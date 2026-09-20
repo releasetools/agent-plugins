@@ -5,6 +5,25 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.5.0 - 2026-09-20
+
+`/release-notes:write` says so and stops where a repository has no
+`.releasetools.yaml`, rather than treating the repository root as one project.
+A note written into a changelog nobody named is worse than one nobody wrote,
+and `npx @releasetools/config adopt` writes a starter declaration.
+
+A project names every file that carries its version, and nothing is inferred
+from what a directory happens to contain, which is `@releasetools/config@0.3.0`
+carried here. A path in `projects` is a directory rather than a pattern, so
+the expansion this used to do is gone.
+
+### Choices
+
+The reader is pinned and copied rather than reimplemented, so the guards in
+releasetools/actions and this plugin cannot disagree about which project a
+change belongs to. `npm run sync` writes it and `npm run sync -- --check`
+fails when the copy drifts.
+
 ## 0.4.0 - 2026-09-19
 
 `/release-notes:write` writes the note for one change, on the branch that

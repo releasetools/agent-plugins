@@ -31,7 +31,7 @@
       "name": "release-notes",
       "source": "./plugins/release-notes",
       "description": "Draft a release's changelog entry from the commits since the last tag",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "ReleaseTools",
         "url": "https://github.com/releasetools"
