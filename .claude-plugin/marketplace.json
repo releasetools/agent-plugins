@@ -52,7 +52,7 @@
       "name": "release",
       "source": "./plugins/release",
       "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "ReleaseTools",
         "url": "https://github.com/releasetools"

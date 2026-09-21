@@ -20,9 +20,9 @@ so the next person to cut a release is offered the same plugin.
 
 ## What it needs
 
-[releasetools/cli](https://github.com/releasetools/cli) for the checks
-(`brew install releasetools/tap/releasetools-cli`), `gh` authenticated for the
-pull request and the workflows, and the
+[releasetools/cli](https://github.com/releasetools/cli) v0.4.0 or newer for the
+checks and the bump (`brew install releasetools/tap/releasetools-cli`), `gh`
+authenticated for the pull request and the workflows, and the
 [release-notes plugin](../release-notes/) for the changelog entry.
 
 ## What it reads
@@ -36,18 +36,23 @@ projects:
 
 release:
   branch: main
+  merge: squash
   checks: tests.yml
   publish: publish.yml
-  registry: https://pypi.org/pypi/worktrees/{version}/json
+  registry: https://pypi.org/pypi/my-package/{version}/json
 ```
 
 | key        | what it is                                           | default                        |
 | ---------- | ---------------------------------------------------- | ------------------------------ |
 | `branch`   | what a release is cut from                           | `main`                         |
-| `tag`      | the tag's shape                                      | `v{version}`                   |
+| `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                       |
 | `checks`   | the workflow that must be green on the merged commit | none, and the wait is skipped  |
 | `publish`  | the workflow the tag starts, watched to the end      | none, and it stops at the push |
 | `registry` | a URL that must 404 before releasing                 | none                           |
+
+The tag's shape is not declared. A repository releasing as one thing tags
+`v<version>`, and one whose projects version independently tags
+`<project>/v<version>`, which the conventions settle.
 
 `bump` is the command the project declares for setting its version, which every
 ecosystem ships: `uv version {version}`, `npm version {version}
@@ -64,9 +69,10 @@ rewrites a manifest.
 | 4   | merge, pull, and wait for the merged commit to go green                                                                     |
 | 5   | tag, push, and watch the publish workflow                                                                                   |
 
-Step 4 is the one worth knowing about. A rebase onto a branch that moved is a
-tree neither side has tested, so the tag only lands after that commit has
-passed on its own.
+Step 4 is the one worth knowing about. What lands is a tree neither the branch
+nor the base has tested on its own, so the tag only goes on after that commit
+has passed. It lands as a squash unless `merge` says otherwise, which is the
+one strategy a branch requiring signed commits and linear history accepts.
 
 ## What it will not do
 
