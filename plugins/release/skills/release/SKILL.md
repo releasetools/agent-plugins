@@ -32,7 +32,6 @@ projects:
 release:
   branch: main
   merge: squash
-  tag: v{version}
   checks: tests.yml
   publish: publish.yml
   registry: https://pypi.org/pypi/my-package/{version}/json
@@ -42,7 +41,6 @@ release:
 | ---------- | ---------------------------------------------------- | ---------------------------------- |
 | `branch`   | what a release is cut from                           | `main`                             |
 | `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                           |
-| `tag`      | the tag's shape                                      | `v{version}`                       |
 | `checks`   | the workflow that must be green on the merged commit | none, and step 4 skips the wait    |
 | `publish`  | the workflow the tag starts, watched to the end      | none, and step 5 stops at the push |
 | `registry` | a URL that must 404 before releasing                 | none                               |
@@ -50,6 +48,11 @@ release:
 `{version}` is the bare version everywhere, with no `v`. `registry` names the
 distribution as the registry knows it, which is not always the repository's
 name or the package a reader imports.
+
+The tag's shape is not declared. A repository releasing as one thing tags
+`v<version>`, and one whose projects version independently tags
+`<project>/v<version>`, which the conventions settle rather than leave to a
+key here.
 
 A repository declaring several projects releases one of them at a time. Take
 the one the user named, and ask when they named none rather than guessing.

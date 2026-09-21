@@ -46,10 +46,13 @@ release:
 | ---------- | ---------------------------------------------------- | ------------------------------ |
 | `branch`   | what a release is cut from                           | `main`                         |
 | `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                       |
-| `tag`      | the tag's shape                                      | `v{version}`                   |
 | `checks`   | the workflow that must be green on the merged commit | none, and the wait is skipped  |
 | `publish`  | the workflow the tag starts, watched to the end      | none, and it stops at the push |
 | `registry` | a URL that must 404 before releasing                 | none                           |
+
+The tag's shape is not declared. A repository releasing as one thing tags
+`v<version>`, and one whose projects version independently tags
+`<project>/v<version>`, which the conventions settle.
 
 `bump` is the command the project declares for setting its version, which every
 ecosystem ships: `uv version {version}`, `npm version {version}

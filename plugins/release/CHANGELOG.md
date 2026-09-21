@@ -24,6 +24,11 @@ The declaration example names `my-package` rather than a real distribution.
 repository's, and one copied from an example is checked against somebody
 else's package.
 
+The `tag` key is gone from the documentation. There was never one to set:
+the format does not define it, `@releasetools/config` does not read it, and
+the conventions settle the tag's shape. A repository that declared it got a
+key nothing read.
+
 ### Choices
 
 The default changed rather than staying where it was. A key with a
