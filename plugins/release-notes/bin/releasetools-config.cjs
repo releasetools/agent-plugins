@@ -240,8 +240,8 @@ function settingsFrom(text, where = CONFIG_FILE) {
 
 const KEYS = ['path', 'manifest', 'changelog', 'bump'];
 
-/** What the format says a release is cut from, checked against, and started by. */
-const RELEASE_KEYS = ['branch', 'checks', 'publish', 'registry'];
+/** What the format says a release is cut from, lands as, checked against, and started by. */
+const RELEASE_KEYS = ['branch', 'merge', 'checks', 'publish', 'registry'];
 
 /**
  * How a release is cut, where the repository says.
