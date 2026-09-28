@@ -2,6 +2,16 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+## 0.2.1 - 2026-09-28
+
+### Fixed
+
+Release preparation runs in a linked worktree while the main checkout stays
+clean on the default branch. Publication tags the verified PR merge commit
+explicitly, even when the default branch advances during checks. Releases
+from another branch use a separate publication checkout, and the publish
+workflow is selected by the release commit and tag.
+
 ## 0.2.0 - 2026-09-21
 
 A release's pull request lands the way `.releasetools.yaml` says, in the
