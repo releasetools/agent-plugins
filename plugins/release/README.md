@@ -44,15 +44,14 @@ release:
 
 | key        | what it is                                           | default                        |
 | ---------- | ---------------------------------------------------- | ------------------------------ |
-| `branch`   | what a release is cut from                           | `main`                         |
+| `branch`   | what a release is cut from                           | the remote's default branch    |
 | `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                       |
 | `checks`   | the workflow that must be green on the merged commit | none, and the wait is skipped  |
 | `publish`  | the workflow the tag starts, watched to the end      | none, and it stops at the push |
 | `registry` | a URL that must 404 before releasing                 | none                           |
 
-The tag's shape is not declared. A repository releasing as one thing tags
-`v<version>`, and one whose projects version independently tags
-`<project>/v<version>`, which the conventions settle.
+The release tag is `v<version>`, as defined by the conventions. There is no
+tag-shape setting in `.releasetools.yaml`.
 
 `bump` is the command the project declares for setting its version, which every
 ecosystem ships: `uv version {version}`, `npm version {version}
@@ -61,18 +60,23 @@ rewrites a manifest.
 
 ## The steps
 
-|     |                                                                                                                             |
-| --- | --------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `rt release::prechecks` — version shape, clean tree, tag free, after the newest release, on the branch, not on the registry |
-| 2   | branch from `origin/<branch>`, `/release-notes:prepare`, `rt version::bump`, commit, push                                   |
-| 3   | the pull request, with the changelog entry as its body, and its checks watched                                              |
-| 4   | merge, pull, and wait for the merged commit to go green                                                                     |
-| 5   | tag, push, and watch the publish workflow                                                                                   |
+Release preparation runs in a linked worktree and branch owned by this
+release. The main checkout stays clean on the remote's default branch. One
+operator owns its updates through publication; other agents work in their
+own linked checkouts. A release from another branch uses a separate
+publication worktree too.
 
-Step 4 is the one worth knowing about. What lands is a tree neither the branch
-nor the base has tested on its own, so the tag only goes on after that commit
-has passed. It lands as a squash unless `merge` says otherwise, which is the
-one strategy a branch requiring signed commits and linear history accepts.
+|     |                                                                                                         |
+| --- | ------------------------------------------------------------------------------------------------------- |
+| 1   | reserve the main checkout, synchronize it, then run `rt release::prechecks` in the publication checkout |
+| 2   | create a linked release worktree, prepare the notes and version, review the files, commit and push      |
+| 3   | the pull request, with the changelog entry as its body, and its checks watched                          |
+| 4   | merge the recorded PR, synchronize main and verify the exact merged commit                              |
+| 5   | sign a tag naming that commit, push and watch its publish workflow                                      |
+
+The release tag names the PR's merged commit even if the default branch
+advances during verification. The version and required checks are verified
+at that SHA. Local builds and tests run outside the main checkout.
 
 ## What it will not do
 
