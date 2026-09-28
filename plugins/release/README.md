@@ -64,7 +64,8 @@ Release preparation runs in a linked worktree and branch owned by this
 release. The main checkout stays clean on the remote's default branch. One
 operator owns its updates through publication; other agents work in their
 own linked checkouts. A release from another branch uses a separate
-publication worktree too.
+publication worktree too, and its preparation branch starts at that release
+branch's fetched tip.
 
 |     |                                                                                                         |
 | --- | ------------------------------------------------------------------------------------------------------- |
@@ -76,7 +77,8 @@ publication worktree too.
 
 The release tag names the PR's merged commit even if the default branch
 advances during verification. The version and required checks are verified
-at that SHA. Local builds and tests run outside the main checkout.
+at that SHA. Local builds and tests use a linked checkout at the verified
+release commit, and artifacts are built from that checkout.
 
 ## What it will not do
 

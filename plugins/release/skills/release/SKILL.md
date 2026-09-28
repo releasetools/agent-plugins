@@ -89,16 +89,17 @@ including a checkout ahead of the remote. A failed fetch stops the release.
 Now read `.releasetools.yaml` in the main checkout and resolve `<branch>`.
 Configuration in an unrelated feature worktree does not select the release.
 
-For a release from the default branch, `<publication-worktree>` is the main
-checkout. For another release branch, create a separate publication worktree:
+For a release from the default branch, `<publication-worktree>` is the
+existing main checkout. For another release branch, create a separate
+publication worktree at an unused path outside main:
 
 ```bash
 git worktree add --detach "<publication-worktree>" "refs/remotes/origin/<branch>"
 ```
 
-Use a new path outside the main checkout. An existing path is reusable only
-when it belongs to this release and is clean. Never borrow another agent's
-worktree. Run the prechecks from the publication checkout:
+For a resumed nondefault release, reuse its separate publication worktree
+only when it belongs to this release and is clean. Never borrow another
+agent's worktree. Run the prechecks from the selected publication checkout:
 
 ```bash
 cd "<publication-worktree>"
@@ -119,8 +120,10 @@ is how one gets skipped.
 
 ## 2. Prepare in a linked worktree
 
-Create a linked worktree and release branch from the fetched release branch.
-Choose an unused path outside the main checkout, and keep one writer per
+Create the preparation branch from the fetched tip of `<branch>`, the
+configured release branch. For a release from `stable`, that base is
+`refs/remotes/origin/stable`; the main checkout stays on the default branch.
+Choose an unused linked-worktree path outside main, and keep one writer per
 worktree. If creation fails, stop before editing.
 
 ```bash
@@ -222,9 +225,11 @@ rt github::await_workflow "$RELEASE_SHA" <checks>
 ```
 
 Skip the wait only when no checks workflow is configured. Run any required
-local builds or tests in a separate linked checkout at `RELEASE_SHA`; keep
-their output outside main. Publication commands that create artifacts use
-that checkout or an output path outside main too.
+local builds or tests in a separate linked checkout at `RELEASE_SHA`. Build
+release artifacts in that checkout too, keeping output outside main. An
+external output directory does not make artifacts built from a newer main
+checkout belong to `RELEASE_SHA`. Publish those verified artifacts or use CI
+that checks out the release tag's exact commit.
 
 Use `squash` where the repository declares no merge strategy. GitHub signs
 the squash commit with its web-flow key. Respect the repository's signing
