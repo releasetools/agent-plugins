@@ -896,25 +896,28 @@ describe("permission rules", () => {
       "Bash(mutex list:*)",
       "Bash(mutex lock:*)",
       "Bash(mutex renew:*)",
+      "Bash(mutex server status:*)",
       "Bash(mutex status:*)",
       "Bash(mutex try-lock:*)",
       "Bash(mutex unlock:*)",
+      "Bash(mutex version:*)",
       "Bash(node /plugins/x/agent-lock.mjs:*)",
       'Bash(node "/plugins/x/agent-lock.mjs":*)',
     ]);
   });
 
   /**
-   * `mutex server` starts and stops the server every session shares, and
-   * `mutex prune` deletes rows from the shared table. Both keep asking.
+   * `mutex server start`, `run` and `stop` start and stop the server every
+   * session shares, and `mutex prune` deletes rows from the shared table. They
+   * keep asking; `mutex server status` only reports, so it does not.
    */
-  it("leaves the server and prune commands, and the whole CLI, to ask", () => {
+  it("leaves server start, run, stop and prune, and the whole CLI, to ask", () => {
     const rules = permissionRules("/x.mjs");
 
     expect(rules).not.toContain("Bash(mutex:*)");
     expect(
-      rules.some((rule: string) => rule.startsWith("Bash(mutex server")),
-    ).toBe(false);
+      rules.filter((rule: string) => rule.startsWith("Bash(mutex server")),
+    ).toEqual(["Bash(mutex server status:*)"]);
     expect(
       rules.some((rule: string) => rule.startsWith("Bash(mutex prune")),
     ).toBe(false);
@@ -929,7 +932,7 @@ describe("permission rules", () => {
 
     const report = grantPermissions({ home, helper: "/x.mjs" });
 
-    expect(report.missing).toHaveLength(8);
+    expect(report.missing).toHaveLength(10);
     expect(settingsOf(home).permissions.allow).toEqual(["Bash(cat:*)"]);
   });
 
@@ -946,7 +949,7 @@ describe("permission rules", () => {
 
     expect(
       grantPermissions({ home, helper: "/x.mjs", write: true }).added,
-    ).toHaveLength(8);
+    ).toHaveLength(10);
     const settings = settingsOf(home);
     expect(settings.model).toBe("opus");
     expect(settings.statusLine).toEqual({ type: "command", command: "x.sh" });

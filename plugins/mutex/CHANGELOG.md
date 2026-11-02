@@ -8,10 +8,11 @@ shipped four releases before it kept a changelog.
 ## 0.4.3 - 2026-11-02
 
 `/mutex:preflight` grants one permission rule per CLI subcommand the skill
-runs, `mutex list`, `lock`, `renew`, `status`, `try-lock` and `unlock`, in
-place of `Bash(mutex:*)`, so `mutex server` and `mutex prune` ask before they
-run. A `Bash(mutex:*)` rule an earlier preflight wrote stays in
-`~/.claude/settings.json` until you delete it, because preflight only appends.
+runs, `mutex list`, `lock`, `renew`, `server status`, `status`, `try-lock`,
+`unlock` and `version`, in place of `Bash(mutex:*)`, so `mutex server start`,
+`run` and `stop`, and `mutex prune`, ask before they run. A `Bash(mutex:*)`
+rule an earlier preflight wrote stays in `~/.claude/settings.json` until you
+delete it, because preflight only appends.
 
 ## 0.4.2 - 2026-09-18
 

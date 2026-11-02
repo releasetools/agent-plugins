@@ -42,10 +42,10 @@ Options: `--reason`, `--expiration <seconds>`, `--wait <seconds>`, `--try`,
 `--owner <name>`, `--profile <name>`, `--grant`, `--json`, `--no-color`.
 
 `--grant` appends one rule per CLI subcommand (`mutex list`, `lock`, `renew`,
-`status`, `try-lock` and `unlock`) and the helper's own invocation to
-`permissions.allow` in `~/.claude/settings.json`, so neither the skill nor a
-hand-run command stops to ask. `mutex server` and `mutex prune` get no rule and
-still ask. `mutex lock <id> -- <program>` runs the program under the lock, so
+`server status`, `status`, `try-lock`, `unlock` and `version`) and the helper's
+own invocation to `permissions.allow` in `~/.claude/settings.json`, so neither
+the skill nor a hand-run command stops to ask. `mutex server start`, `run` and
+`stop`, and `mutex prune`, get no rule and still ask. `mutex lock <id> -- <program>` runs the program under the lock, so
 the `lock` rule also lets that program run without asking. `--grant` only ever
 appends, refuses a settings file it cannot parse, and is passed by
 `/mutex:preflight` alone - never by this skill.

@@ -770,18 +770,21 @@ export function runMutex(args, options = {}) {
  * string from the bare one.
  *
  * The CLI gets one rule per subcommand rather than `Bash(mutex:*)`, which would
- * also pass `mutex server` and `mutex prune`: the first starts and stops the
- * server every session shares, the second deletes rows from the shared table,
- * and both should ask. `mutex lock <id> -- <program>` runs the program under
- * the lock, so the `lock` rule lets that program run without asking too.
+ * also pass the rest of `mutex server` and `mutex prune`: `server start`,
+ * `run` and `stop` start and stop the server every session shares, `prune`
+ * deletes rows from the shared table, and those should ask. `server status`
+ * and `version` only report. `mutex lock <id> -- <program>` runs the program under the
+ * lock, so the `lock` rule lets that program run without asking too.
  */
 const MUTEX_SUBCOMMANDS = [
   "list",
   "lock",
   "renew",
+  "server status",
   "status",
   "try-lock",
   "unlock",
+  "version",
 ];
 
 export function permissionRules(helper) {
