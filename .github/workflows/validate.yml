@@ -38,7 +38,11 @@ env:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
     permissions:
       contents: read
     outputs:
@@ -127,12 +131,13 @@ jobs:
   install:
     needs: checks
     if: needs.checks.outputs.any == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
         plugin: ${{ fromJson(needs.checks.outputs.plugins) }}
     steps:
       - name: Checkout code
@@ -209,7 +214,11 @@ jobs:
   # about the CLI. This runs it against a published mutex and a real database,
   # which is the only place a rename upstream shows up before a user finds it.
   contract:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
     permissions:
       contents: read
     services:
@@ -262,7 +271,7 @@ jobs:
   validated:
     if: always()
     needs: [checks, install, contract]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions: {}
     steps:
       - name: ✅ Every validation job passed
