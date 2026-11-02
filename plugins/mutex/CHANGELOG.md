@@ -5,6 +5,15 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.4.1 was read back out of the commits, because the plugin
 shipped four releases before it kept a changelog.
 
+## 0.4.3 - 2026-11-02
+
+`/mutex:preflight` grants one permission rule per CLI subcommand the skill
+runs, `mutex list`, `lock`, `renew`, `server status`, `status`, `try-lock`,
+`unlock` and `version`, in place of `Bash(mutex:*)`, so `mutex server start`,
+`run` and `stop`, and `mutex prune`, ask before they run. A `Bash(mutex:*)`
+rule an earlier preflight wrote stays in `~/.claude/settings.json` until you
+delete it, because preflight only appends.
+
 ## 0.4.2 - 2026-09-18
 
 The plugin carries this changelog. Nothing about running it changed: the

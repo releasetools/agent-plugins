@@ -891,12 +891,36 @@ describe("permission rules", () => {
       fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"),
     );
 
-  it("covers both spellings of the helper's own invocation", () => {
+  it("covers each CLI subcommand and both spellings of the helper's own invocation", () => {
     expect(permissionRules("/plugins/x/agent-lock.mjs")).toEqual([
-      "Bash(mutex:*)",
+      "Bash(mutex list:*)",
+      "Bash(mutex lock:*)",
+      "Bash(mutex renew:*)",
+      "Bash(mutex server status:*)",
+      "Bash(mutex status:*)",
+      "Bash(mutex try-lock:*)",
+      "Bash(mutex unlock:*)",
+      "Bash(mutex version:*)",
       "Bash(node /plugins/x/agent-lock.mjs:*)",
       'Bash(node "/plugins/x/agent-lock.mjs":*)',
     ]);
+  });
+
+  /**
+   * `mutex server start`, `run` and `stop` start and stop the server every
+   * session shares, and `mutex prune` deletes rows from the shared table. They
+   * keep asking; `mutex server status` only reports, so it does not.
+   */
+  it("leaves server start, run, stop and prune, and the whole CLI, to ask", () => {
+    const rules = permissionRules("/x.mjs");
+
+    expect(rules).not.toContain("Bash(mutex:*)");
+    expect(
+      rules.filter((rule: string) => rule.startsWith("Bash(mutex server")),
+    ).toEqual(["Bash(mutex server status:*)"]);
+    expect(
+      rules.some((rule: string) => rule.startsWith("Bash(mutex prune")),
+    ).toBe(false);
   });
 
   it("reports what is missing, and writes nothing without being asked", () => {
@@ -908,7 +932,7 @@ describe("permission rules", () => {
 
     const report = grantPermissions({ home, helper: "/x.mjs" });
 
-    expect(report.missing).toHaveLength(3);
+    expect(report.missing).toHaveLength(10);
     expect(settingsOf(home).permissions.allow).toEqual(["Bash(cat:*)"]);
   });
 
@@ -925,7 +949,7 @@ describe("permission rules", () => {
 
     expect(
       grantPermissions({ home, helper: "/x.mjs", write: true }).added,
-    ).toHaveLength(3);
+    ).toHaveLength(10);
     const settings = settingsOf(home);
     expect(settings.model).toBe("opus");
     expect(settings.statusLine).toEqual({ type: "command", command: "x.sh" });
