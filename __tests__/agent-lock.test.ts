@@ -891,12 +891,33 @@ describe("permission rules", () => {
       fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"),
     );
 
-  it("covers both spellings of the helper's own invocation", () => {
+  it("covers each CLI subcommand and both spellings of the helper's own invocation", () => {
     expect(permissionRules("/plugins/x/agent-lock.mjs")).toEqual([
-      "Bash(mutex:*)",
+      "Bash(mutex list:*)",
+      "Bash(mutex lock:*)",
+      "Bash(mutex renew:*)",
+      "Bash(mutex status:*)",
+      "Bash(mutex try-lock:*)",
+      "Bash(mutex unlock:*)",
       "Bash(node /plugins/x/agent-lock.mjs:*)",
       'Bash(node "/plugins/x/agent-lock.mjs":*)',
     ]);
+  });
+
+  /**
+   * `mutex server` starts and stops the server every session shares, and
+   * `mutex prune` deletes rows from the shared table. Both keep asking.
+   */
+  it("leaves the server and prune commands, and the whole CLI, to ask", () => {
+    const rules = permissionRules("/x.mjs");
+
+    expect(rules).not.toContain("Bash(mutex:*)");
+    expect(
+      rules.some((rule: string) => rule.startsWith("Bash(mutex server")),
+    ).toBe(false);
+    expect(
+      rules.some((rule: string) => rule.startsWith("Bash(mutex prune")),
+    ).toBe(false);
   });
 
   it("reports what is missing, and writes nothing without being asked", () => {
@@ -908,7 +929,7 @@ describe("permission rules", () => {
 
     const report = grantPermissions({ home, helper: "/x.mjs" });
 
-    expect(report.missing).toHaveLength(3);
+    expect(report.missing).toHaveLength(8);
     expect(settingsOf(home).permissions.allow).toEqual(["Bash(cat:*)"]);
   });
 
@@ -925,7 +946,7 @@ describe("permission rules", () => {
 
     expect(
       grantPermissions({ home, helper: "/x.mjs", write: true }).added,
-    ).toHaveLength(3);
+    ).toHaveLength(8);
     const settings = settingsOf(home);
     expect(settings.model).toBe("opus");
     expect(settings.statusLine).toEqual({ type: "command", command: "x.sh" });
