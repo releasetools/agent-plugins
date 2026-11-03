@@ -5,6 +5,15 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.5.1 - 2026-11-03
+
+`commits` counts from the newest `vX.Y.Z` tag rather than the nearest one. In
+a repository whose release tags sit on built commits off the main branch, it
+used to reach back past every release to the last tag on that branch, or find
+none and take the whole history; it now starts at the commit the tag's
+`Source-Commit` or `Workflow-Commit` trailer names. A floating major tag on
+the release commit no longer stands in for the version.
+
 ## 0.5.0 - 2026-09-20
 
 `/release-notes:write` says so and stops where a repository has no
