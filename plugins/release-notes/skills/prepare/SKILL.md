@@ -33,6 +33,13 @@ It prints the previous tag, the range, and a row per commit. When
 history, and the entry describes what the software does rather than what
 changed in it.
 
+The previous tag is the newest `vX.Y.Z`, not the nearest tag, so a floating
+`v1` on the same commit is passed over. A repository that publishes a built
+tree tags a commit on another branch, which this branch never contains; the
+range then starts at the commit that tag's `Source-Commit` or
+`Workflow-Commit` trailer names. A tag naming neither falls back to the
+nearest tag this branch contains.
+
 Add `--path <dir>` when the thing being released is a subtree rather than the
 repository: a plugin in a monorepo, a package in a workspace. The range then
 covers only the commits that touched it, the entry lands in

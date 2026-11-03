@@ -279,6 +279,75 @@ export function previousTag(cwd) {
   return tag ? tag : null;
 }
 
+const VERSION_TAG = /^v\d+\.\d+\.\d+$/;
+
+/** Trailers naming the commit a published tree was built from, preferred first. */
+const SOURCE_TRAILERS = ["Source-Commit", "Workflow-Commit"];
+
+function isAncestor(cwd, commit) {
+  return (
+    git(["merge-base", "--is-ancestor", commit, "HEAD"], {
+      cwd,
+      allowFailure: true,
+    }) !== null
+  );
+}
+
+/**
+ * The commit a tag's tree was built from, read from a Source-Commit or
+ * Workflow-Commit trailer on the tagged commit, or null when it names none.
+ * signed-push writes Workflow-Commit on every commit it makes.
+ */
+export function builtFrom(cwd, tag) {
+  const body = git(["log", "-1", "--format=%B", tag], {
+    cwd,
+    allowFailure: true,
+  });
+  if (!body) {
+    return null;
+  }
+  for (const name of SOURCE_TRAILERS) {
+    const line = new RegExp(`^${name}:\\s*<?\\S*?([0-9a-f]{40})>?\\s*$`, "m");
+    const found = body.match(line);
+    if (found) {
+      return found[1];
+    }
+  }
+  return null;
+}
+
+/**
+ * Where the range of the release being prepared starts, as the tag that names
+ * the previous release and the commit the range counts from.
+ *
+ * That is the newest vX.Y.Z tag when HEAD contains it. A repository that
+ * publishes a built tree tags a commit on another branch instead, which HEAD
+ * never contains, so the range starts at the commit that tag's trailer says
+ * it was built from. Anything else falls back to the nearest tag HEAD
+ * contains. Null on a repository with no tags.
+ */
+export function previousRelease(cwd) {
+  const listed = git(["tag", "--list", "v*", "--sort=-v:refname"], {
+    cwd,
+    allowFailure: true,
+  });
+  const newest = (listed ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .find((name) => VERSION_TAG.test(name));
+  if (newest) {
+    if (isAncestor(cwd, newest)) {
+      return { tag: newest, base: newest };
+    }
+    const source = builtFrom(cwd, newest);
+    if (source && isAncestor(cwd, source)) {
+      return { tag: newest, base: source };
+    }
+  }
+  const nearest = previousTag(cwd);
+  return nearest ? { tag: nearest, base: nearest } : null;
+}
+
 /**
  * Every commit in the range, oldest first, with the size of what it touched.
  *
@@ -993,8 +1062,9 @@ export function noteInRange(cwd, range) {
 
 function commandCommits(shared) {
   const { cwd, since, subtree, stdout } = shared;
-  const tag = since ?? previousTag(cwd);
-  const range = tag ? `${tag}..HEAD` : "HEAD";
+  const previous = since ? { tag: since, base: since } : previousRelease(cwd);
+  const tag = previous?.tag ?? null;
+  const range = previous ? `${previous.base}..HEAD` : "HEAD";
 
   // Before anything is read, so a run that dies in the middle of the ruling
   // cannot leave the previous release's body for something else to publish.

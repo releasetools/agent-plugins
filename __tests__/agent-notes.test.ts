@@ -155,6 +155,80 @@ describe("what is in scope", () => {
     expect(scope.commits[0].insertions).toBe(1);
   });
 
+  it("skips a floating major tag for the version tag on the same commit", () => {
+    const root = repository();
+    commit(root, "Released", { "a.txt": "one\n" });
+    git(root, ["tag", "v0.1.0"]);
+    git(root, ["tag", "v0"]);
+    commit(root, "Since", { "b.txt": "two\n" });
+
+    const scope = json(root, ["commits"]);
+
+    expect(scope.previousTag).toBe("v0.1.0");
+    expect(scope.range).toBe("v0.1.0..HEAD");
+  });
+
+  it("starts where a tag on a published branch says it was built from", () => {
+    const root = repository();
+    commit(root, "Before", { "a.txt": "one\n" });
+    commit(root, "Released", { "a.txt": "two\n" });
+    const source = git(root, ["rev-parse", "HEAD"]).trim();
+    git(root, ["switch", "--quiet", "--orphan", "release/v1"]);
+    commit(
+      root,
+      `release: v1.0.0\n\nSource-Commit: <https://github.com/o/r/commit/${source}>`,
+      { "dist.js": "built\n" },
+    );
+    git(root, ["tag", "v1.0.0"]);
+    git(root, ["switch", "--quiet", "main"]);
+    commit(root, "Since", { "b.txt": "three\n" });
+
+    const scope = json(root, ["commits"]);
+
+    expect(scope.previousTag).toBe("v1.0.0");
+    expect(scope.range).toBe(`${source}..HEAD`);
+    expect(
+      scope.commits.map((entry: { subject: string }) => entry.subject),
+    ).toEqual(["Since"]);
+  });
+
+  it("reads the Workflow-Commit trailer signed-push writes", () => {
+    const root = repository();
+    commit(root, "Released", { "a.txt": "one\n" });
+    const source = git(root, ["rev-parse", "HEAD"]).trim();
+    git(root, ["switch", "--quiet", "--orphan", "release/v0"]);
+    commit(
+      root,
+      `release: v0.2.0\n\n---\n\nWorkflow-Commit: <https://github.com/o/r/commit/${source}>`,
+      { "dist.js": "built\n" },
+    );
+    git(root, ["tag", "v0.2.0"]);
+    git(root, ["switch", "--quiet", "main"]);
+    commit(root, "Since", { "b.txt": "two\n" });
+
+    const scope = json(root, ["commits"]);
+
+    expect(scope.previousTag).toBe("v0.2.0");
+    expect(scope.range).toBe(`${source}..HEAD`);
+    expect(scope.firstRelease).toBe(false);
+  });
+
+  it("falls back to the nearest tag when the newest names no source", () => {
+    const root = repository();
+    commit(root, "Released", { "a.txt": "one\n" });
+    git(root, ["tag", "v0.1.0"]);
+    git(root, ["switch", "--quiet", "--create", "stable"]);
+    commit(root, "Backport", { "c.txt": "fix\n" });
+    git(root, ["tag", "v0.9.0"]);
+    git(root, ["switch", "--quiet", "main"]);
+    commit(root, "Since", { "b.txt": "two\n" });
+
+    const scope = json(root, ["commits"]);
+
+    expect(scope.previousTag).toBe("v0.1.0");
+    expect(scope.range).toBe("v0.1.0..HEAD");
+  });
+
   it("clears the scratch file before it reads anything", () => {
     const root = repository();
     commit(root, "First", { "a.txt": "one\n" });
