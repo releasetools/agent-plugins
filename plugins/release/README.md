@@ -39,16 +39,23 @@ release:
   merge: squash
   checks: tests.yml
   publish: publish.yml
+  trigger: tag
   registry: https://pypi.org/pypi/my-package/{version}/json
 ```
 
-| key        | what it is                                           | default                        |
-| ---------- | ---------------------------------------------------- | ------------------------------ |
-| `branch`   | what a release is cut from                           | the remote's default branch    |
-| `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                       |
-| `checks`   | the workflow that must be green on the merged commit | none, and the wait is skipped  |
-| `publish`  | the workflow the tag starts, watched to the end      | none, and it stops at the push |
-| `registry` | a URL that must 404 before releasing                 | none                           |
+| key        | what it is                                                  | default                        |
+| ---------- | ----------------------------------------------------------- | ------------------------------ |
+| `branch`   | what a release is cut from                                  | the remote's default branch    |
+| `merge`    | how the pull request lands: squash, rebase or merge         | `squash`                       |
+| `checks`   | the workflow that must be green on the release commit       | none, and the wait is skipped  |
+| `publish`  | the workflow that publishes, watched to the end             | none, and it stops at the push |
+| `trigger`  | what starts `publish`: `tag`, `dispatch`, or a list of both | `tag`                          |
+| `registry` | a URL that must 404 before releasing                        | none                           |
+
+Under `tag` the plugin pushes the signed tag and the push starts `publish`.
+Under `dispatch` it runs `publish` with the version and the release commit, and
+the workflow creates the tag. `/release:setup` declares which, and changes the
+publish workflow to match.
 
 The release tag is `v<version>`, as defined by the conventions. There is no
 tag-shape setting in `.releasetools.yaml`.
@@ -73,10 +80,11 @@ branch's fetched tip.
 | 2   | create a linked release worktree, prepare the notes and version, review the files, commit and push      |
 | 3   | the pull request, with the changelog entry as its body, and its checks watched                          |
 | 4   | merge the recorded PR, synchronize main and verify the exact merged commit                              |
-| 5   | sign a tag naming that commit, push and watch its publish workflow                                      |
+| 5   | under `tag`, sign and push a tag naming that commit; under `dispatch`, run the workflow that tags it    |
 
-The release tag names the PR's merged commit even if the default branch
-advances during verification. The version and required checks are verified
+The release tag leads back to the PR's merged commit even if the default
+branch advances during verification. Under `dispatch` it names that commit, or
+a built commit whose `Source-Commit` trailer does. The version and required checks are verified
 at that SHA. Local builds and tests use a linked checkout at the verified
 release commit, and artifacts are built from that checkout.
 

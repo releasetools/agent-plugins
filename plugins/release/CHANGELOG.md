@@ -2,6 +2,30 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+## 0.3.0 - 2026-11-04
+
+### Added
+
+A repository that publishes by dispatch is released the way it publishes.
+Under `release.trigger: dispatch`, step 5 runs the `publish` workflow with the
+bare version and the release commit instead of pushing a tag, then checks that
+the tag the workflow created names that commit or carries a `Source-Commit`
+trailer naming it. Where the branch moved on after the merge, it dispatches on
+a `publish/v<version>` branch at the release commit, so later commits never
+ship under the version. Under `tag`, the default, nothing changes.
+
+`/release:setup` declares which trigger a repository uses and changes its
+publish workflow to meet the rules for it, as a pull request. It is a command
+rather than a GitHub Action because a workflow's own token cannot write
+`.github/workflows/`.
+
+### Choices
+
+One key, `release.trigger`, rather than a convention per mechanism: conventions
+apply unless excepted, so two rival ones would put every repository in breach
+of one, and a repository allowing both would still need a key to say which this
+plugin runs.
+
 ## 0.2.1 - 2026-09-28
 
 ### Fixed

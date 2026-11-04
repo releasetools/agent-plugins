@@ -1,6 +1,6 @@
 {
   "name": "release",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
   "author": {
     "name": "ReleaseTools",
@@ -15,13 +15,14 @@
   "interface": {
     "displayName": "release",
     "shortDescription": "One release, one step at a time, stopping at the first refusal",
-    "longDescription": "Run the steps a release takes, in order, from what the repository declares in .releasetools.yaml: the prechecks that have to pass, the changelog entry, the version bump through the command the project declares, the pull request and its checks, the merge, the wait for the merged commit to go green, and the tag that publishes. Every step is one command whose output is read before the next one runs, and the first refusal stops the release rather than being worked around.",
+    "longDescription": "Run the steps a release takes, in order, from what the repository declares in .releasetools.yaml: the prechecks that have to pass, the changelog entry, the version bump through the command the project declares, the pull request and its checks, the merge, the wait for the merged commit to go green, and publication: pushing the tag, or dispatching the workflow that creates it, as the repository declares. Every step is one command whose output is read before the next one runs, and the first refusal stops the release rather than being worked around.",
     "developerName": "ReleaseTools",
     "category": "Developer Tools",
     "capabilities": [
       "Run a release's steps in order, stopping at the first refusal",
       "Bump the version with the command the project declares",
-      "Tag only a commit whose checks already passed"
+      "Publish only a commit whose checks already passed, by tag or by dispatch",
+      "Declare how a repository publishes and make its workflow match"
     ],
     "websiteURL": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release#readme",
     "defaultPrompt": [
