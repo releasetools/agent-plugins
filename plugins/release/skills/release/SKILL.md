@@ -318,6 +318,12 @@ gh run watch <publish-run-id> --exit-status
 greater than the one noted. If it has not appeared, report publication as
 pending and wait for it.
 
+A run that refuses because its commit is not `RELEASE_SHA` means the branch
+moved between the check and the dispatch. Nothing was published: push
+`publish/v<version>` as above and dispatch on it. Pushing that branch starts
+whatever runs on a push to any branch, and the published artifacts record it
+as their ref.
+
 When the run has finished, check that the tag it created leads back to the
 release:
 
@@ -335,7 +341,8 @@ and say so. A tag leading anywhere else is a release of the wrong commit:
 report it and stop.
 
 Delete a `publish/v<version>` branch once the run has finished; it names
-nothing a reader needs.
+nothing a reader needs. Where the deletion is refused, report the branch rather
+than retry.
 
 ```bash
 git push origin --delete refs/heads/publish/v<version>
