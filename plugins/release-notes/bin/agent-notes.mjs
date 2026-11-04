@@ -317,35 +317,43 @@ export function builtFrom(cwd, tag) {
 }
 
 /**
- * Where the range of the release being prepared starts, as the tag that names
- * the previous release and the commit the range counts from.
+ * Where the range of the release being prepared starts: the tag that names the
+ * previous release, the commit the range counts from, and the newer version
+ * tags passed over on the way.
  *
- * That is the newest vX.Y.Z tag when HEAD contains it. A repository that
- * publishes a built tree tags a commit on another branch instead, which HEAD
- * never contains, so the range starts at the commit that tag's trailer says
- * it was built from. Anything else falls back to the nearest tag HEAD
- * contains. Null on a repository with no tags.
+ * FORMAT's "Judging a version" makes the previous release the newest vX.Y.Z
+ * tag whose release commit HEAD contains. A tag's release commit is the tagged
+ * commit where HEAD contains it, and otherwise the commit its trailer says a
+ * built tree came from. A newer tag that leads back to neither is another
+ * line's release or one that does not say where it came from, and it is
+ * passed over and listed rather than guessed at. A repository with no vX.Y.Z
+ * tag at all falls back to the nearest tag HEAD contains. Null with no tags.
  */
 export function previousRelease(cwd) {
   const listed = git(["tag", "--list", "v*", "--sort=-v:refname"], {
     cwd,
     allowFailure: true,
   });
-  const newest = (listed ?? "")
+  const versions = (listed ?? "")
     .split("\n")
     .map((line) => line.trim())
-    .find((name) => VERSION_TAG.test(name));
-  if (newest) {
-    if (isAncestor(cwd, newest)) {
-      return { tag: newest, base: newest };
+    .filter((name) => VERSION_TAG.test(name));
+  const skipped = [];
+  for (const tag of versions) {
+    if (isAncestor(cwd, tag)) {
+      return { tag, base: tag, skipped };
     }
-    const source = builtFrom(cwd, newest);
+    const source = builtFrom(cwd, tag);
     if (source && isAncestor(cwd, source)) {
-      return { tag: newest, base: source };
+      return { tag, base: source, skipped };
     }
+    skipped.push(tag);
+  }
+  if (versions.length > 0) {
+    return { tag: null, base: null, skipped };
   }
   const nearest = previousTag(cwd);
-  return nearest ? { tag: nearest, base: nearest } : null;
+  return nearest ? { tag: nearest, base: nearest, skipped } : null;
 }
 
 /**
@@ -1062,7 +1070,16 @@ export function noteInRange(cwd, range) {
 
 function commandCommits(shared) {
   const { cwd, since, subtree, stdout } = shared;
-  const previous = since ? { tag: since, base: since } : previousRelease(cwd);
+  const previous = since
+    ? { tag: since, base: since, skipped: [] }
+    : previousRelease(cwd);
+  if (previous && previous.base === null) {
+    throw new HelperError(
+      `no version tag leads back to a commit HEAD contains: ${previous.skipped.join(", ")} ` +
+        "name neither a commit on this branch nor a Source-Commit trailer that does. " +
+        "Pass --since <commit> with the commit the previous release was cut from.",
+    );
+  }
   const tag = previous?.tag ?? null;
   const range = previous ? `${previous.base}..HEAD` : "HEAD";
 
@@ -1077,6 +1094,7 @@ function commandCommits(shared) {
       {
         previousTag: tag,
         range,
+        skippedTags: previous?.skipped ?? [],
         path: subtree,
         firstRelease: tag === null,
         changelog: path.join(

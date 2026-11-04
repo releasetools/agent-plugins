@@ -33,12 +33,15 @@ It prints the previous tag, the range, and a row per commit. When
 history, and the entry describes what the software does rather than what
 changed in it.
 
-The previous tag is the newest `vX.Y.Z`, not the nearest tag, so a floating
-`v1` on the same commit is passed over. A repository that publishes a built
-tree tags a commit on another branch, which this branch never contains; the
-range then starts at the commit that tag's `Source-Commit` or
-`Workflow-Commit` trailer names. A tag naming neither falls back to the
-nearest tag this branch contains.
+The previous tag is the newest `vX.Y.Z` whose release commit this branch
+contains, as
+[`traceable-tag`](https://github.com/releasetools/conventions/blob/main/conventions/traceable-tag.md)
+defines it: the tagged commit itself, or for a tag on a built tree, the commit
+its `Source-Commit` trailer names. A floating `v1` is never it. Newer version
+tags that lead back to nothing here, a backport on another line among them,
+are listed in `skippedTags`. Where version tags exist and none leads back
+here, the command stops and asks for `--since`, because taking the whole
+history would be a guess.
 
 Add `--path <dir>` when the thing being released is a subtree rather than the
 repository: a plugin in a monorepo, a package in a workspace. The range then
