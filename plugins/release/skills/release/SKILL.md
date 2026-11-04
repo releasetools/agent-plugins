@@ -2,8 +2,8 @@
 name: release
 description: >
   Cut a release: the prechecks, the changelog entry, the version bump, the
-  pull request and its checks, the merge, the wait, and the tag that
-  publishes. Reads what the repository declares in .releasetools.yaml. Use
+  pull request and its checks, the merge, the wait, and publication: the tag,
+  or the dispatched workflow that creates it. Reads what the repository declares in .releasetools.yaml. Use
   when the user says release, cut a release, ship x.y.z, or publish this
   version. Triggers on: release, cut a release, ship a version, tag and
   publish.
@@ -34,16 +34,26 @@ release:
   merge: squash
   checks: tests.yml
   publish: publish.yml
+  trigger: tag
   registry: https://pypi.org/pypi/my-package/{version}/json
 ```
 
-| key        | what it is                                           | default                            |
-| ---------- | ---------------------------------------------------- | ---------------------------------- |
-| `branch`   | what a release is cut from                           | the remote's default branch        |
-| `merge`    | how the pull request lands: squash, rebase or merge  | `squash`                           |
-| `checks`   | the workflow that must be green on the merged commit | none, and step 4 skips the wait    |
-| `publish`  | the workflow the tag starts, watched to the end      | none, and step 5 stops at the push |
-| `registry` | a URL that must 404 before releasing                 | none                               |
+| key        | what it is                                                  | default                            |
+| ---------- | ----------------------------------------------------------- | ---------------------------------- |
+| `branch`   | what a release is cut from                                  | the remote's default branch        |
+| `merge`    | how the pull request lands: squash, rebase or merge         | `squash`                           |
+| `checks`   | the workflow that must be green on the release commit       | none, and step 4 skips the wait    |
+| `publish`  | the workflow that publishes, watched to the end             | none, and step 5 stops at the push |
+| `trigger`  | what starts `publish`: `tag`, `dispatch`, or a list of both | `tag`                              |
+| `registry` | a URL that must 404 before releasing                        | none                               |
+
+Under `tag`, step 5 signs and pushes the tag and the push starts `publish`.
+Under `dispatch`, step 5 runs `publish` with the version and the release
+commit, and the workflow creates the tag, on that commit or on a built one
+whose `Source-Commit` trailer names it. With both listed, step 5 does the
+first unless the user asks for the other.
+[FORMAT](https://github.com/releasetools/conventions/blob/main/FORMAT.md#configuration)
+rules 24 to 29 say what each refuses.
 
 `{version}` is the bare version everywhere, with no `v`. `registry` names the
 distribution as the registry knows it, which is not always the repository's
@@ -245,7 +255,12 @@ If it fails, the branch now carries the version bump and no release exists.
 Say so plainly. The fix is another pull request and then this skill again, at
 the same version, since no tag was created.
 
-## 5. Tag, which is what publishes
+## 5. Publish
+
+`trigger` decides who creates the tag: this step under `tag`, the `publish`
+workflow under `dispatch`.
+
+### Under `tag`: push the tag
 
 From the publication checkout, tag the recorded SHA explicitly. Use the
 signing key Git configuration selects.
@@ -268,6 +283,73 @@ Select the run whose `headSha` is `RELEASE_SHA` and whose `headBranch` is the
 release tag. If it has not appeared, report publication as pending and wait
 for that run. A different release's run does not establish success.
 
+### Under `dispatch`: run the workflow, which tags
+
+Nothing here creates a tag. The workflow refuses a version whose tag already
+exists, so a tag pushed by hand blocks the release it was meant to make.
+
+A dispatched run builds whatever its ref names when it starts, and refuses
+unless that is the `commit` it was given. Dispatch on the release branch while
+it still names `RELEASE_SHA`:
+
+```bash
+git ls-remote origin refs/heads/<branch>
+```
+
+Where the branch has moved on, put a branch at the release commit and dispatch
+on that instead, so commits merged after the release never ride along:
+
+```bash
+git push origin "$RELEASE_SHA:refs/heads/publish/v<version>"
+```
+
+Note the newest dispatched run before dispatching, so the one this starts can
+be told apart from an earlier one:
+
+```bash
+gh run list --workflow <publish> --event workflow_dispatch --limit 1 --json databaseId
+gh workflow run <publish> --ref <ref> -f version=<version> -f commit="$RELEASE_SHA"
+gh run list --workflow <publish> --event workflow_dispatch --json databaseId,headSha,url
+gh run watch <publish-run-id> --exit-status
+```
+
+`<ref>` is `<branch>` or `publish/v<version>`, and `version` is bare, with no
+`v`. Select the run whose `headSha` is `RELEASE_SHA` and whose `databaseId` is
+greater than the one noted. If it has not appeared, report publication as
+pending and wait for it.
+
+A run that refuses because its commit is not `RELEASE_SHA` means the branch
+moved between the check and the dispatch. Nothing was published: push
+`publish/v<version>` as above and dispatch on it. Pushing that branch starts
+whatever runs on a push to any branch, and the published artifacts record it
+as their ref.
+
+When the run has finished, check that the tag it created leads back to the
+release:
+
+```bash
+git fetch origin "refs/tags/v<version>:refs/tags/v<version>"
+git rev-parse "v<version>^{commit}"
+git log -1 --format=%B "v<version>" | git interpret-trailers --parse
+```
+
+The tagged commit is `RELEASE_SHA`, or its `Source-Commit` trailer names
+`RELEASE_SHA`. A workflow not yet updated for
+[`traceable-tag`](https://github.com/releasetools/conventions/blob/main/conventions/traceable-tag.md)
+writes only `Workflow-Commit`, which says the same about a dispatch; accept it
+and say so. A tag leading anywhere else is a release of the wrong commit:
+report it and stop.
+
+Delete a `publish/v<version>` branch once the run has finished; it names
+nothing a reader needs. Where the deletion is refused, report the branch rather
+than retry.
+
+```bash
+git push origin --delete refs/heads/publish/v<version>
+```
+
+### Either way
+
 Release ownership when publication finishes or the workflow stops, including
 on failure. Report the release URL, and the registry URL where there is one.
 
@@ -276,6 +358,9 @@ on failure. Report the release URL, and the registry URL where there is one.
 Move a tag. A tag names one commit forever, and a version that needs a second
 attempt gets the next number. Where a publish workflow fails after it has
 already uploaded, re-run that workflow rather than re-tagging.
+
+Create a tag under `dispatch`. The workflow creates it, and refuses a version
+whose tag already exists.
 
 Force anything, stash the user's work, delete an unmerged branch, or retry a
 failed check in the hope that it passes.
