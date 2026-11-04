@@ -213,7 +213,7 @@ describe("what is in scope", () => {
     expect(scope.firstRelease).toBe(false);
   });
 
-  it("falls back to the nearest tag when the newest names no source", () => {
+  it("passes over a newer tag on another line, and lists it", () => {
     const root = repository();
     commit(root, "Released", { "a.txt": "one\n" });
     git(root, ["tag", "v0.1.0"]);
@@ -227,6 +227,33 @@ describe("what is in scope", () => {
 
     expect(scope.previousTag).toBe("v0.1.0");
     expect(scope.range).toBe("v0.1.0..HEAD");
+    expect(scope.skippedTags).toEqual(["v0.9.0"]);
+  });
+
+  it("refuses to guess when no version tag leads back here", () => {
+    const root = repository();
+    commit(root, "First", { "a.txt": "one\n" });
+    git(root, ["switch", "--quiet", "--orphan", "release/v1"]);
+    commit(root, "release: v1.0.0", { "dist.js": "built\n" });
+    git(root, ["tag", "v1.0.0"]);
+    git(root, ["switch", "--quiet", "main"]);
+
+    const result = run(root, ["commits"]);
+
+    expect(result.code).not.toBe(0);
+    expect(result.err).toMatch(/no version tag leads back.*v1\.0\.0.*--since/s);
+  });
+
+  it("keeps the nearest tag where no tag is a version tag", () => {
+    const root = repository();
+    commit(root, "Released", { "a.txt": "one\n" });
+    git(root, ["tag", "release-2026"]);
+    commit(root, "Since", { "b.txt": "two\n" });
+
+    const scope = json(root, ["commits"]);
+
+    expect(scope.previousTag).toBe("release-2026");
+    expect(scope.skippedTags).toEqual([]);
   });
 
   it("clears the scratch file before it reads anything", () => {

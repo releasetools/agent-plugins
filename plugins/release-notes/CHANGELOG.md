@@ -5,6 +5,18 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.5.2 - 2026-11-04
+
+### Fixed
+
+`commits` takes the newest version tag whose release commit this branch
+contains, walking older tags until one does, as
+[`traceable-tag`](https://github.com/releasetools/conventions/blob/main/conventions/traceable-tag.md)
+now defines it. A newer tag on another line, which 0.5.1 handed to `git
+describe`, is passed over and listed in `skippedTags`. Where version tags
+exist and none leads back to this branch, the command stops and asks for
+`--since` rather than taking the whole history.
+
 ## 0.5.1 - 2026-11-03
 
 `commits` counts from the newest `vX.Y.Z` tag rather than the nearest one. In
