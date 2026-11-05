@@ -279,81 +279,27 @@ export function previousTag(cwd) {
   return tag ? tag : null;
 }
 
-const VERSION_TAG = /^v\d+\.\d+\.\d+$/;
-
-/** Trailers naming the commit a published tree was built from, preferred first. */
-const SOURCE_TRAILERS = ["Source-Commit", "Workflow-Commit"];
-
-function isAncestor(cwd, commit) {
-  return (
-    git(["merge-base", "--is-ancestor", commit, "HEAD"], {
-      cwd,
-      allowFailure: true,
-    }) !== null
-  );
-}
-
-/**
- * The commit a tag's tree was built from, read from a Source-Commit or
- * Workflow-Commit trailer on the tagged commit, or null when it names none.
- * signed-push writes Workflow-Commit on every commit it makes.
- */
-export function builtFrom(cwd, tag) {
-  const body = git(["log", "-1", "--format=%B", tag], {
-    cwd,
-    allowFailure: true,
-  });
-  if (!body) {
-    return null;
-  }
-  for (const name of SOURCE_TRAILERS) {
-    const line = new RegExp(`^${name}:\\s*<?\\S*?([0-9a-f]{40})>?\\s*$`, "m");
-    const found = body.match(line);
-    if (found) {
-      return found[1];
-    }
-  }
-  return null;
-}
-
 /**
  * Where the range of the release being prepared starts: the tag that names the
  * previous release, the commit the range counts from, and the newer version
  * tags passed over on the way.
  *
- * FORMAT's "Judging a version" makes the previous release the newest vX.Y.Z
- * tag whose release commit HEAD contains. A tag's release commit is the tagged
- * commit where HEAD contains it, and otherwise the commit its trailer says a
- * built tree came from. A newer tag that leads back to neither is another
- * line's release or one that does not say where it came from, and it is
- * passed over and listed rather than guessed at. A repository with no vX.Y.Z
- * tag at all falls back to the nearest tag HEAD contains. Null with no tags.
+ * The rule is FORMAT's "Judging a version" rule 1, answered by
+ * `newestReleaseTag` in the reader this plugin carries, which is the one
+ * versions-guard calls too, so the notes and the guard cannot disagree about
+ * where the last release was. A repository with no version tag at all falls
+ * back to the nearest tag HEAD contains. Null with no tags.
  */
 export function previousRelease(cwd) {
-  const listed = git(["tag", "--list", "v*", "--sort=-v:refname"], {
-    cwd,
-    allowFailure: true,
+  const found = newestReleaseTag((args) => {
+    const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+    return { status: result.status ?? 1, stdout: result.stdout ?? "" };
   });
-  const versions = (listed ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((name) => VERSION_TAG.test(name));
-  const skipped = [];
-  for (const tag of versions) {
-    if (isAncestor(cwd, tag)) {
-      return { tag, base: tag, skipped };
-    }
-    const source = builtFrom(cwd, tag);
-    if (source && isAncestor(cwd, source)) {
-      return { tag, base: source, skipped };
-    }
-    skipped.push(tag);
-  }
-  if (versions.length > 0) {
-    return { tag: null, base: null, skipped };
+  if (found !== null) {
+    return { tag: found.tag, base: found.commit, skipped: found.skipped };
   }
   const nearest = previousTag(cwd);
-  return nearest ? { tag: nearest, base: nearest, skipped } : null;
+  return nearest ? { tag: nearest, base: nearest, skipped: [] } : null;
 }
 
 /**
@@ -605,6 +551,7 @@ const {
   ConfigError,
   IGNORED,
   MISSPELLED,
+  newestReleaseTag,
   parseYaml,
   settingsFrom,
 } = createRequire(import.meta.url)("./releasetools-config.cjs");

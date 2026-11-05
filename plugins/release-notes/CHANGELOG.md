@@ -5,6 +5,16 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.5.3 - 2026-11-05
+
+### Changed
+
+`commits` finds the previous release through `newestReleaseTag` in
+`@releasetools/config` 0.7.0, the copy `versions-guard` uses, so the two can
+no longer disagree about where the last release was. A pre-release tag such as
+`v1.0.0-rc.1` now counts as a version, ordered before the release it names,
+where it used to be passed over.
+
 ## 0.5.2 - 2026-11-04
 
 ### Fixed
