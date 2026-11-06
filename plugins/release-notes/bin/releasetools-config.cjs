@@ -240,7 +240,7 @@ function settingsFrom(text, where = CONFIG_FILE) {
 
 const KEYS = ['path', 'manifest', 'changelog', 'bump'];
 
-/** What the format says a release is cut from, lands as, checked against, and started by. */
+/** The release keys that each name one thing. `trigger` takes a list as well, so it is read on its own. */
 const RELEASE_KEYS = ['branch', 'merge', 'checks', 'publish', 'registry'];
 
 /**
@@ -269,7 +269,48 @@ function releaseFrom(value, where) {
     }
     declared[key] = found.trim();
   }
+
+  const trigger = triggerFrom(value['trigger'], `${where} trigger`);
+  if (trigger !== null) {
+    if (trigger.includes('dispatch') && declared.publish === undefined) {
+      throw new ConfigError(
+        `${where} trigger includes dispatch, so ${where} publish must name the workflow it dispatches`,
+      );
+    }
+    declared.trigger = trigger;
+  }
   return declared;
+}
+
+/** What can start a release's publish workflow. */
+const TRIGGERS = ['tag', 'dispatch'];
+
+/**
+ * What starts publication, as a list in the order a release tool tries it.
+ *
+ * One name or a list of them. Null where the file says nothing, which the
+ * format reads as `tag`; the reader leaves that to its caller rather than
+ * writing a default the file never declared.
+ */
+function triggerFrom(value, where) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const names = Array.isArray(value) ? value : [value];
+  if (names.length === 0) {
+    throw new ConfigError(`${where} must be tag, dispatch, or a list of both, or left out`);
+  }
+  const seen = [];
+  for (const name of names) {
+    if (typeof name !== 'string' || !TRIGGERS.includes(name.trim())) {
+      throw new ConfigError(`${where} must be tag, dispatch, or a list of both, got ${JSON.stringify(name)}`);
+    }
+    if (seen.includes(name.trim())) {
+      throw new ConfigError(`${where} names ${name.trim()} twice`);
+    }
+    seen.push(name.trim());
+  }
+  return seen;
 }
 
 /** The groups of projects a repository holds. */
@@ -399,6 +440,97 @@ function boolean(value, where) {
   return value;
 }
 
+
+/**
+ * Where a release happened, read from its version tag.
+ *
+ * FORMAT's "Versions and tags" rule 8 makes a release's release commit the
+ * commit on the release branch it was cut from, and rule 9 says how a tool
+ * finds it: the tagged commit where the branch contains it, and otherwise the
+ * commit the tagged commit's Source-Commit trailer names. A repository that
+ * publishes a built tree tags a commit on release/vN, which the branch never
+ * contains, and `git describe` then answers with whatever older tag the
+ * branch still holds. The guards in releasetools/actions and the release-notes
+ * plugin both ask this, so it is answered once, here.
+ *
+ * `git` runs one git command in the repository and returns its exit status
+ * and stdout: `(args) => ({ status, stdout })`. Nothing here spawns a process
+ * itself, so the reader stays free of anything but the format.
+ */
+
+/** A version tag: `v`, a semantic version, no build metadata. */
+const VERSION_TAG = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/;
+
+/** Trailers naming the commit a built tree came from. Workflow-Commit is on tags from before Source-Commit. */
+const SOURCE_TRAILERS = ['Source-Commit', 'Workflow-Commit'];
+
+/** The full SHA a commit message's Source-Commit (or older Workflow-Commit) trailer names, or null. */
+function sourceCommitIn(message) {
+  for (const name of SOURCE_TRAILERS) {
+    const found = new RegExp(`^${name}:\\s*<?\\S*?([0-9a-f]{40})>?\\s*$`, 'm').exec(message);
+    if (found) {
+      return found[1];
+    }
+  }
+  return null;
+}
+
+function contains(git, head, commit) {
+  return git(['merge-base', '--is-ancestor', commit, head]).status === 0;
+}
+
+/**
+ * The commit `tag`'s release was cut from, where `head` contains it: the tag
+ * itself when `head` holds it, otherwise the full SHA its trailer names. Null
+ * when the tag leads back to no commit `head` contains, which is another
+ * line's release or a built tree that does not say where it came from.
+ */
+function releaseCommitOf(git, tag, head = 'HEAD') {
+  if (contains(git, head, tag)) {
+    return tag;
+  }
+  const message = git(['log', '-1', '--format=%B', tag]);
+  if (message.status !== 0) {
+    return null;
+  }
+  const source = sourceCommitIn(message.stdout);
+  return source !== null && contains(git, head, source) ? source : null;
+}
+
+/**
+ * The previous release as "Judging a version" rule 1 defines it: the newest
+ * version tag whose release commit `head` contains.
+ *
+ * Returns `{ tag, commit, skipped }`: the tag, its release commit (the tag's
+ * own name where `head` holds it), and the newer version tags passed over
+ * because they lead back to nothing here. Where version tags exist and none
+ * leads back, `tag` and `commit` are null. Null when there is no version tag
+ * at all. Tags are ordered by git's version sort, with a pre-release before
+ * the release it names.
+ */
+function newestReleaseTag(git, head = 'HEAD') {
+  const listed = git(['-c', 'versionsort.suffix=-', 'tag', '--list', 'v*', '--sort=-v:refname']);
+  if (listed.status !== 0) {
+    return null;
+  }
+  const tags = listed.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((name) => VERSION_TAG.test(name));
+  if (tags.length === 0) {
+    return null;
+  }
+  const skipped = [];
+  for (const tag of tags) {
+    const commit = releaseCommitOf(git, tag, head);
+    if (commit !== null) {
+      return { tag, commit, skipped };
+    }
+    skipped.push(tag);
+  }
+  return { tag: null, commit: null, skipped };
+}
+
 module.exports = {
   ABSENT,
   CONFIG_FILE,
@@ -408,4 +540,7 @@ module.exports = {
   parseYaml,
   settingsFrom,
   projectsFrom,
+  sourceCommitIn,
+  releaseCommitOf,
+  newestReleaseTag,
 };
