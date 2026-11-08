@@ -3,16 +3,24 @@ name: release
 description: >
   Cut a release: the prechecks, the changelog entry, the version bump, the
   pull request and its checks, the merge, the wait, and publication: the tag,
-  or the dispatched workflow that creates it. Reads what the repository declares in .releasetools.yaml. Use
-  when the user says release, cut a release, ship x.y.z, or publish this
-  version. Triggers on: release, cut a release, ship a version, tag and
-  publish.
+  or the dispatched workflow that creates it. Reads what the repository
+  declares in .releasetools.yaml. Use when the user says release, cut a
+  release, ship x.y.z, or publish this version. Triggers on: release, cut a
+  release, ship a version, tag and publish.
+argument-hint: "<version> [--path <dir>]"
+allowed-tools:
+  - Bash(git:*)
+  - Bash(gh:*)
+  - Bash(glab:*)
+  - Bash(rt:*)
+  - Read
+  - Write
 ---
 
 # release: one step at a time
 
-A release runs the steps below in order. Read each command's result before
-running the next, and stop at the first refusal.
+A release runs the steps below in order. Show what each command printed, in
+one line, before running the next, and stop at the first refusal.
 
 Nothing here is worth improvising. Where a step refuses, say what it said and
 stop; the fix is a person's decision, not a retry.
@@ -63,12 +71,15 @@ The release tag is `v<version>`, as defined by the conventions. There is no
 tag-shape setting in `.releasetools.yaml`.
 
 A repository declaring several projects releases one of them at a time. Take
-the one the user named, and ask when they named none rather than guessing.
+the one the user named, as `--path <dir>` or in words, and ask when they named
+none rather than guessing. `<path>` below is that project's `path`.
 
 ## The version
 
-The user gives it. With no version, ask. Never guess one from the commits:
-a version guessed wrong is a version somebody has to notice.
+The user gives it, bare: `0.1.2`. With no version, ask. `v0.1.2` is the tag
+that names a release, not a version: given one, say so and ask for `0.1.2`.
+Never guess one from the commits: a version guessed wrong is a version
+somebody has to notice.
 
 ## 1. Everything that has to be true first
 
@@ -146,10 +157,13 @@ checking their state. An existing name belonging to another task is a refusal.
 Run all preparation commands and local tests here. Dependency installation
 and build output also belong here, outside the main checkout.
 
-Then the entry, with `/release-notes:prepare <version>`. It rules on the
-changes since the previous tag, takes the note each one declared, writes
-`CHANGELOG.md` and leaves the same body in `$GIT_DIR/RELEASE_EDITMSG`. Do not
-write that entry by hand: what publishes the release reads it back out.
+Then the entry, with `/release-notes:prepare <version> --path <path>`. It
+rules on the changes to that project since the previous tag, takes the note
+each one declared, writes `<path>/CHANGELOG.md` and leaves the same body in
+the `scratchFile` it prints: `$GIT_DIR/RELEASE_EDITMSG` for a project at the
+repository root, and `RELEASE_EDITMSG-<path>` with each `/` as `-` for one
+below it. Do not write that entry by hand: what publishes the release reads it
+back out.
 
 Then the version, with the command the project declared:
 
@@ -178,7 +192,7 @@ Run these commands in the preparation worktree. Record the pull request
 number as `<pr>` and use it explicitly in the remaining steps.
 
 ```bash
-gh pr create --base <branch> --title "Release <version>" --body-file "$(git rev-parse --path-format=absolute --git-path RELEASE_EDITMSG)"
+gh pr create --base <branch> --title "Release <version>" --body-file "<scratchFile>"
 gh pr checks <pr> --watch --fail-fast
 ```
 
@@ -351,7 +365,8 @@ git push origin --delete refs/heads/publish/v<version>
 ### Either way
 
 Release ownership when publication finishes or the workflow stops, including
-on failure. Report the release URL, and the registry URL where there is one.
+on failure. Report the tag, the release URL, and the registry URL where there
+is one.
 
 ## What this never does
 

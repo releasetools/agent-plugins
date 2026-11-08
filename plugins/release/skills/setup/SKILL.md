@@ -1,6 +1,7 @@
 ---
 name: setup
 description: Declare how this repository publishes a release, by tag or by dispatch, and make its publish workflow match
+disable-model-invocation: true
 argument-hint: "[tag | dispatch | both]"
 allowed-tools:
   - Bash(git:*)
@@ -11,12 +12,11 @@ allowed-tools:
   - Edit
 ---
 
-In Codex, `$ARGUMENTS` means the arguments supplied with the skill.
+Set up how this repository publishes a release. The argument, when the user
+gives one, is the trigger: `tag`, `dispatch` or `both`. With none, ask.
 
-Set up how this repository publishes a release. `$ARGUMENTS`, when given, is
-the trigger; with none, ask.
-
-Read the release skill's "What the repository declares" first, and
+Read "What the repository declares" in the
+[release skill](../release/SKILL.md#what-the-repository-declares) first, and
 [FORMAT](https://github.com/releasetools/conventions/blob/main/FORMAT.md#configuration)
 rules 18 to 29. They are what the result is checked against, and nothing below
 repeats them.
