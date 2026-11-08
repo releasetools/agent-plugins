@@ -18,6 +18,10 @@ codex plugin add release@release-tools
 `--scope project` declares it in the repository rather than in whoever ran it,
 so the next person to cut a release is offered the same plugin.
 
+Claude Code runs `/release:cut 1.2.3`, `/release:setup` and `/release:help`.
+Codex runs the same three as `$release:cut 1.2.3`, `$release:setup` and
+`$release:help`.
+
 ## What it needs
 
 [releasetools/cli](https://github.com/releasetools/cli) v0.4.0 or newer for the

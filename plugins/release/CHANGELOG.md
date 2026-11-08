@@ -2,6 +2,16 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+## 0.4.0 - 2026-11-08
+
+### Added
+
+Codex runs `$release:cut`, `$release:setup` and `$release:help`, the three
+that Claude Code runs as `/release:cut`, `/release:setup` and
+`/release:help`. Codex offered `$release:release` alone before, because it
+turns a plugin's commands into skills only when the plugin ships no Agent
+Plugins manifest, and this one ships one.
+
 ## 0.3.0 - 2026-11-04
 
 ### Added
