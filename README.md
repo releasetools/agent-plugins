@@ -40,13 +40,9 @@ hermes plugins install releasetools/agent-plugins/plugins/release-notes
 | `mutex`         | Guard a shared resource with a distributed lock, using the mutex CLI  |
 | `release-notes` | Draft a release's changelog entry from the commits since the last tag |
 | `release`       | Cut a release: prechecks, notes, bump, pull request, merge, tag       |
-| `worktrees`     | Remove finished git worktrees and branches, after asking              |
 
 The plugins live here: `plugins/<name>/` is the source, not a copy of one, and
-a merge to `main` is the release. `worktrees` is the exception: it lives in
-[MihaiBojin/worktrees](https://github.com/MihaiBojin/worktrees/tree/main/plugin),
-and both catalogs fetch it from there at a release tag. It drives the
-`worktrees` CLI, which `uv tool install git-worktrees` installs. See [AGENTS.md](./AGENTS.md) for how to change
+a merge to `main` is the release. See [AGENTS.md](./AGENTS.md) for how to change
 one.
 
 ### mutex needs the mutex CLI

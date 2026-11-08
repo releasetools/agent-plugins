@@ -68,16 +68,6 @@
         "github",
         "tag"
       ]
-    },
-    {
-      "name": "worktrees",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/MihaiBojin/worktrees.git",
-        "path": "plugin",
-        "ref": "v0.7.0"
-      },
-      "description": "Remove the git worktrees and branches the worktrees CLI proves finished, after asking"
     }
   ]
 }
