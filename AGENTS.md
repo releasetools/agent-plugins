@@ -4,10 +4,6 @@ This is where the plugins live. Editing one is an ordinary pull request: change
 the files under `plugins/<name>/`, bump its version, and the merge is the
 release. Nothing is copied in from anywhere else.
 
-A plugin that lives in another repository is listed rather than copied:
-`remote-plugins.json` names its repository, the subdirectory and the release
-tag, and both catalogs point there.
-
 Four kinds of file are generated and must not be hand-edited: the two
 catalogs, each plugin's `plugin.json`, and
 `plugins/release-notes/bin/releasetools-config.cjs`, which `npm run sync`
@@ -22,7 +18,6 @@ publish, bump the pin here, and run the sync.
 ```text
 plugins/<name>/                   A plugin. The source, not a copy of one
 plugins/<name>/plugin.json        What every other agent reads  (generated)
-remote-plugins.json               Plugins listed from other repositories
 .claude-plugin/marketplace.json   Claude Code's catalog     (generated)
 .agents/plugins/marketplace.json  Codex's catalog           (generated)
 scripts/validate-plugin.mjs       One plugin's own layout
@@ -48,31 +43,9 @@ each keeps its own client's schema:
   metadata in the plugin's own manifest under `interface`, so the catalog entry
   carries only the category, which comes from there too.
 
-A plugin from another repository takes a `git-subdir` source in both
-catalogs: an https `url`, the `path` of the plugin inside that repository, and
-the `ref` to clone, which is a release tag. Both clients clone it there and
-read the plugin's own manifests, so its Claude Code entry carries only the
-description, and its version is whatever the tag holds. Each comes from
-`remote-plugins.json`:
-
-```json
-{
-  "name": "worktrees",
-  "url": "https://github.com/MihaiBojin/worktrees.git",
-  "path": "plugin",
-  "ref": "v0.7.0",
-  "description": "Remove the git worktrees and branches ...",
-  "category": "Developer Tools"
-}
-```
-
-The validator checks the shape: an https url, a path that stays inside the
-repository, a ref that is a tag or branch name, and the same three in both
-catalogs. It cannot read the plugin at that ref, and CI installs only the
-plugins under `plugins/`. Merge a change to `ref` once that tag exists, and
-install the plugin from the branch with both clients before merging. A plugin
-listed this way is versioned and released in its own repository, so neither
-guard below has anything here to check.
+Codex has no other kind of source. Its catalog resolves a plugin as a path
+inside the marketplace it cloned, so a plugin cannot be a pointer at another
+repository - which is why the plugins are here rather than referenced.
 
 Neither client validates the other's file, so a marketplace whose two halves
 disagree installs different things depending on which agent you asked. That is
