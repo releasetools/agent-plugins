@@ -2,6 +2,18 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+## 0.5.0 - 2026-11-09
+
+`/release:preflight user` or `/release:preflight project` adds the Claude
+Code permission rules that let a release sign and push its tag after the
+turn that started it, to `~/.claude/settings.json` or the repository's
+`.claude/settings.json`. It shows every missing line and asks first, runs
+only when called by name, and configures Claude Code alone.
+
+Where auto mode refuses the tag push, which it does without those rules
+since the push publishes, `/release:release` says so and names
+`/release:preflight`.
+
 ## 0.4.0 - 2026-11-08
 
 ### Removed

@@ -18,12 +18,24 @@ codex plugin add release@release-tools
 `--scope project` declares it in the repository rather than in whoever ran it,
 so the next person to cut a release is offered the same plugin.
 
-Claude Code runs `/release:release 1.2.3`, `/release:setup` and
-`/release:help`. Codex runs the same three as `$release:release 1.2.3`,
-`$release:setup` and `$release:help`. Asking either one for a release in
-plain words, such as "cut a release, version 1.2.3", runs `release` too.
-`setup` runs only when called by name, since it opens a pull request that
-changes the publish workflow.
+Claude Code runs `/release:release 1.2.3`, `/release:setup`,
+`/release:preflight` and `/release:help`. Codex runs the same four as
+`$release:release 1.2.3`, `$release:setup`, `$release:preflight` and
+`$release:help`. Asking either one for a release in plain words, such as "cut
+a release, version 1.2.3", runs `release` too. `setup` runs only when called
+by name, since it opens a pull request that changes the publish workflow, and
+so does `preflight`, since it changes what runs without asking.
+
+## Pushing the tag in auto mode
+
+The release skill's own pre-approval lasts the turn that started the release,
+and a release spends several waiting on checks. Claude Code's auto mode then
+refuses to push the tag, since the push publishes. `/release:preflight user`
+adds [the rules that let it through](skills/preflight/rules.json) to
+`~/.claude/settings.json`, and `/release:preflight project` to the
+repository's `.claude/settings.json`, which reaches every machine that clones
+it once committed. It shows every missing line and asks first, and configures
+Claude Code alone.
 
 ## What it needs
 
