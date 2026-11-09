@@ -8,19 +8,19 @@ allowed-tools:
   - Bash(node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs":*)
 ---
 
-The helper is [`agent-lock.mjs`](../mutex/agent-lock.mjs), in the mutex
-skill's directory beside this one. Run it by its absolute path, written
-`<helper>` below.
+!`node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs" preflight --grant`
 
-Run this once:
+Claude Code runs that before this reaches you, and the line above is what it
+printed. `--grant` adds the permission rules the other skills need to
+`~/.claude/settings.json`, which Claude Code reads and Codex does not.
+
+Where the line is still a command, as in Codex, run it yourself, once, and
+without `--grant`: the helper is [`agent-lock.mjs`](../mutex/agent-lock.mjs) in
+the mutex skill's directory beside this one, written `<helper>` below.
 
 ```bash
-node "<helper>" preflight --grant
+node "<helper>" preflight
 ```
-
-`--grant` adds the permission rules the other skills need to
-`~/.claude/settings.json`, which Claude Code reads and Codex does not. In
-Codex, leave it off.
 
 Report that in one or two sentences: ready or not, how it reaches the database,
 and the name locks will be taken under. Mention the permission rules only if it

@@ -7,20 +7,22 @@ allowed-tools:
   - Bash(node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs":*)
 ---
 
-The helper is [`agent-lock.mjs`](../mutex/agent-lock.mjs), in the mutex
-skill's directory beside this one. Run it by its absolute path, written
-`<helper>` below.
+!`node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs" status`
 
-Run this once, with the lock id after `status` if the user named one:
+Claude Code runs that before this reaches you, and the line above is what it
+printed. Where the line is still a command, as in Codex, run it yourself,
+once: the helper is [`agent-lock.mjs`](../mutex/agent-lock.mjs) in the mutex
+skill's directory beside this one, written `<helper>` below.
 
 ```bash
-node "<helper>" status [id]
+node "<helper>" status
 ```
 
-Print the table it returns **verbatim**, inside a fenced code block, and
-nothing else. Do not summarise it, do not turn it into sentences, and do not
-drop columns: it is a table so it can be scanned down, and a paragraph cannot
-be.
+If the user named a lock, run `node "<helper>" status <id>` instead.
+
+Print the table **verbatim**, inside a fenced code block, and nothing else.
+Do not summarise it, do not turn it into sentences, and do not drop columns:
+it is a table so it can be scanned down, and a paragraph cannot be.
 
 One short line after it is welcome when something needs saying: a lock about
 to lapse, or nothing held at all. On its own it asks the table for this
