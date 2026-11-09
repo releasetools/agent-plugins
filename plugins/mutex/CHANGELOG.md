@@ -5,6 +5,17 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.4.1 was read back out of the commits, because the plugin
 shipped four releases before it kept a changelog.
 
+## 0.5.0 - 2026-11-09
+
+Codex runs `$mutex:lock`, `$mutex:unlock`, `$mutex:renew`, `$mutex:status`,
+`$mutex:callsign`, `$mutex:preflight` and `$mutex:help`, the seven Claude Code
+runs as `/mutex:lock` and the rest. Codex offered the mutex and naming skills
+alone before.
+
+`/mutex:preflight` runs only when called by name, in either client, because it
+adds permission rules to `~/.claude/settings.json`. In Codex it checks the lock
+table and adds none, since Codex does not read that file.
+
 ## 0.4.3 - 2026-11-02
 
 `/mutex:preflight` grants one permission rule per CLI subcommand the skill
