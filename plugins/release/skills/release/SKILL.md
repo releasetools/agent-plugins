@@ -285,6 +285,11 @@ git verify-tag v<version>
 git push origin refs/tags/v<version>
 ```
 
+Auto mode refuses a tag push that no allow rule covers, since the push
+publishes. Where the client refuses it, say that `/release:preflight` adds
+[the rules](../preflight/rules.json) that let it through, and stop: the tag
+is the user's to push, or theirs to allow.
+
 Pushing the tag is the release. Where the repository declares a `publish`
 workflow, watch it to the end:
 

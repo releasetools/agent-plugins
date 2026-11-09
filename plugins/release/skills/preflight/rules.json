@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git tag --sign v*)",
+      "Bash(git verify-tag v*)",
+      "Bash(git push origin refs/tags/v*)"
+    ],
+    "deny": [
+      "Bash(git push * --force)",
+      "Bash(git push * --force *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git tag * --force)",
+      "Bash(git tag * --force *)",
+      "Bash(git tag * -f)",
+      "Bash(git tag * -f *)"
+    ]
+  }
+}

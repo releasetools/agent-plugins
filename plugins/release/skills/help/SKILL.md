@@ -17,6 +17,10 @@ each entry the way their client invokes it: `/release:release` in Claude Code,
 - `/release:setup [tag | dispatch | both]` - declare what starts a release's
   publish workflow, pushing the tag or dispatching the workflow, and change
   that workflow to match, as a pull request. It runs only when called by name
+- `/release:preflight [user | project]` - add the Claude Code permission
+  rules that let a release sign and push its tag after the turn that started
+  it, to the user's or the project's `settings.json`, after showing them. It
+  runs only when called by name
 
 What each step needs comes from `.releasetools.yaml`: which branch a release
 is cut from, the workflow that has to be green, the workflow that publishes and

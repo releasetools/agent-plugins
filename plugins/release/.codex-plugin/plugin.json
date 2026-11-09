@@ -1,6 +1,6 @@
 {
   "name": "release",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
   "author": {
     "name": "ReleaseTools",
