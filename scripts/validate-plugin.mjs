@@ -210,7 +210,8 @@ export function validatePlugin({
 
   validatePortableManifest(root, claude, errors);
   validateSkills(root, errors);
-  validateCommands(root, name, codex, errors);
+  const commands = validateCommands(root, codex, errors);
+  validateHelp(root, name, commands, errors);
   validateNoProductCopies(root, errors);
   validateHooks(root, errors);
 
@@ -298,25 +299,25 @@ function validateSkills(root, errors) {
 }
 
 /**
- * The commands that show up in an agent's slash menu.
+ * The commands a plugin ships beside its skills, when it ships any.
  *
- * Claude Code and Codex both read `commands/` from the plugin root - Codex
- * falls back to it when the manifest names no path, and the manifest names it
- * anyway so the intent is on the page rather than in another tool's default.
+ * Claude Code reads `commands/` from the plugin root. The Codex manifest names
+ * the directory exactly when it exists, so the key never points at nothing.
  *
- * `help.md` lists them for the user, which is the one piece of this that can
- * quietly go stale: adding a command is easy, and remembering that a second
- * file describes it is not. A help text that omits a command is worse than no
- * help text, because it reads as a complete list.
+ * Returns the command names, which the help text has to list.
  */
-function validateCommands(root, pluginName, codex, errors) {
+function validateCommands(root, codex, errors) {
   const directory = path.join(root, "commands");
+  if (!fs.existsSync(directory)) {
+    if (codex && codex.commands !== undefined) {
+      errors.push(
+        `${CODEX_MANIFEST} sets "commands" but there is no commands/ directory`,
+      );
+    }
+    return [];
+  }
   if (codex && codex.commands !== "./commands/") {
     errors.push(`${CODEX_MANIFEST} must set "commands": "./commands/"`);
-  }
-  if (!fs.existsSync(directory)) {
-    errors.push("commands/ is missing");
-    return;
   }
 
   const names = [];
@@ -350,15 +351,39 @@ function validateCommands(root, pluginName, codex, errors) {
     }
     validatePluginRoot(root, `commands/${entry}`, text, errors);
   }
+  return names;
+}
 
-  const help = names.includes("help")
-    ? fs.readFileSync(path.join(directory, "help.md"), "utf8")
-    : null;
-  if (help) {
-    for (const name of names.filter((candidate) => candidate !== "help")) {
-      if (!help.includes(`/${pluginName}:${name}`)) {
-        errors.push(`commands/help.md does not list /${pluginName}:${name}`);
-      }
+/**
+ * The help text lists every entry a user calls by name: the commands, or the
+ * skills where the plugin ships no commands. It is `skills/help/SKILL.md` when
+ * that exists, and `commands/help.md` otherwise.
+ *
+ * It is the one piece of this that can quietly go stale: adding an entry is
+ * easy, and remembering that a second file describes it is not. A help text
+ * that omits an entry is worse than no help text, because it reads as a
+ * complete list.
+ */
+function validateHelp(root, pluginName, commands, errors) {
+  const file = ["skills/help/SKILL.md", "commands/help.md"].find((candidate) =>
+    fs.existsSync(path.join(root, candidate)),
+  );
+  if (!file) {
+    return;
+  }
+
+  const entries =
+    commands.length > 0
+      ? commands
+      : fs
+          .readdirSync(path.join(root, "skills"), { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+          .sort();
+  const help = fs.readFileSync(path.join(root, file), "utf8");
+  for (const name of entries.filter((candidate) => candidate !== "help")) {
+    if (!help.includes(`/${pluginName}:${name}`)) {
+      errors.push(`${file} does not list /${pluginName}:${name}`);
     }
   }
 }

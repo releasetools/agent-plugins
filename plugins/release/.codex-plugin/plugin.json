@@ -1,6 +1,6 @@
 {
   "name": "release",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
   "author": {
     "name": "ReleaseTools",
@@ -11,7 +11,6 @@
   "license": "Apache-2.0",
   "keywords": ["release", "semver", "changelog", "git", "github", "tag"],
   "skills": "./skills/",
-  "commands": "./commands/",
   "interface": {
     "displayName": "release",
     "shortDescription": "One release, one step at a time, stopping at the first refusal",

@@ -1,6 +1,7 @@
 ---
 name: setup
 description: Declare how this repository publishes a release, by tag or by dispatch, and make its publish workflow match
+disable-model-invocation: true
 argument-hint: "[tag | dispatch | both]"
 allowed-tools:
   - Bash(git:*)
@@ -11,10 +12,11 @@ allowed-tools:
   - Edit
 ---
 
-Set up how this repository publishes a release. The argument, when given, is
-the trigger; with none, ask.
+Set up how this repository publishes a release. The argument, when the user
+gives one, is the trigger: `tag`, `dispatch` or `both`. With none, ask.
 
-Read the release skill's "What the repository declares" first, and
+Read "What the repository declares" in the
+[release skill](../release/SKILL.md#what-the-repository-declares) first, and
 [FORMAT](https://github.com/releasetools/conventions/blob/main/FORMAT.md#configuration)
 rules 18 to 29. They are what the result is checked against, and nothing below
 repeats them.
@@ -58,6 +60,6 @@ repeats them.
 7. Show the diff, commit it, push the branch and open a pull request. Do not
    merge it.
 
-This is a command rather than a GitHub Action because a workflow's own token
+An agent does this rather than a GitHub Action because a workflow's own token
 cannot write `.github/workflows/`, and which trigger fits is the maintainer's
 decision.

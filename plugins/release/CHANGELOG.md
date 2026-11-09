@@ -2,6 +2,42 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+## 0.4.0 - 2026-11-08
+
+### Removed
+
+`/release:cut` is gone. Run `/release:release 1.2.3` in Claude Code or
+`$release:release 1.2.3` in Codex, or ask for the release in plain words, which
+reaches the same skill in both. It takes the same `<version> [--path <dir>]`.
+The version is bare: given `v1.2.3`, it says that is the tag and asks for
+`1.2.3`.
+
+### Changed
+
+`/release:setup` runs only when called by name, as `/release:setup` in Claude
+Code or `$release:setup` in Codex. Neither client starts it from a
+description, since it opens a pull request that changes the publish workflow.
+
+A release asked for in plain words pre-approves `git`, `gh`, `glab` and `rt`
+commands for that turn, as `/release:cut` did for `git`, `gh` and `rt`.
+
+A release of one project in a repository that declares several writes its
+entry to that project's `CHANGELOG.md`, from that project's commits only. It
+used to write a `CHANGELOG.md` at the repository root and take every
+project's commits.
+
+### Added
+
+Codex runs `$release:setup` and `$release:help`. It offered
+`$release:release` alone before, because it reads no `commands/` from a
+plugin that ships an Agent Plugins manifest, and those two were commands.
+
+### Choices
+
+Each entry is one skill in `skills/`, with no command beside it. Claude Code
+runs a skill the same way it runs a command, and Codex runs only the skill,
+so a command beside it would be a second copy that one client never reads.
+
 ## 0.3.0 - 2026-11-04
 
 ### Added

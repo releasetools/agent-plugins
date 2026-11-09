@@ -316,12 +316,41 @@ describe("validatePlugin", () => {
     ]);
   });
 
-  it("catches a commands directory that is not there at all", () => {
+  it("accepts a plugin that ships skills and no commands", () => {
+    const root = build({ codex: { commands: undefined } });
+    fs.rmSync(path.join(root, "commands"), { recursive: true });
+
+    expect(validatePlugin({ root }).errors).toEqual([]);
+  });
+
+  it("catches Codex being pointed at a commands directory that is not there", () => {
     const root = build();
     fs.rmSync(path.join(root, "commands"), { recursive: true });
 
     expect(validatePlugin({ root }).errors).toEqual([
-      expect.stringContaining("commands/ is missing"),
+      expect.stringContaining(
+        'sets "commands" but there is no commands/ directory',
+      ),
+    ]);
+  });
+
+  /**
+   * With no commands, the skills are what a user calls by name, so the help
+   * skill is the list that has to stay complete.
+   */
+  it("catches a help skill that has stopped listing a skill", () => {
+    const root = build({ codex: { commands: undefined } });
+    fs.rmSync(path.join(root, "commands"), { recursive: true });
+    fs.mkdirSync(path.join(root, "skills", "help"));
+    fs.writeFileSync(
+      path.join(root, "skills", "help", "SKILL.md"),
+      "---\nname: help\ndescription: What this plugin does\n---\n\n- /mutex:something-else\n",
+    );
+
+    expect(validatePlugin({ root }).errors).toEqual([
+      expect.stringContaining(
+        "skills/help/SKILL.md does not list /mutex:mutex",
+      ),
     ]);
   });
 
