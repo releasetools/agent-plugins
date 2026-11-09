@@ -183,7 +183,7 @@ describe("syncCatalogs", () => {
    * the plugin does not work.
    */
   it("writes no entry for a plugin that does not validate", () => {
-    const root = build(["mutex", { codex: { skills: "./elsewhere/" } }]);
+    const root = build(["mutex", { codex: { version: "0.2.0" } }]);
 
     const { errors, changed } = syncCatalogs({ root });
 

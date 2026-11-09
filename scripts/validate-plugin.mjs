@@ -28,8 +28,8 @@ import {
 /**
  * Checks one plugin directory, the way four different agents read it.
  *
- * `skills/` is the plugin: Claude Code and Codex find it through a manifest of
- * their own, Hermes and Antigravity through `plugin.json` at the root. None of
+ * `skills/` is the plugin: Claude Code finds it through a manifest of its own,
+ * and Codex, Hermes and Antigravity through `plugin.json` at the root. None of
  * these tools complains loudly when the layout is wrong - a
  * plugin with a mistyped skill path simply never offers the skill, which looks
  * exactly like the model deciding not to use it.
@@ -186,12 +186,6 @@ export function validatePlugin({
     errors.push("the two manifests describe the plugin differently");
   }
 
-  // The one line that makes Codex read the shared directory rather than
-  // looking for skills of its own.
-  if (codex && codex.skills !== "./skills/") {
-    errors.push(`${CODEX_MANIFEST} must set "skills": "./skills/"`);
-  }
-
   // Codex keeps the display metadata Claude Code puts at the top level of its
   // manifest under `interface`, and requires it. `category` is also the one
   // field the published catalog entry cannot derive from anywhere else.
@@ -210,7 +204,7 @@ export function validatePlugin({
 
   validatePortableManifest(root, claude, errors);
   validateSkills(root, errors);
-  const commands = validateCommands(root, codex, errors);
+  const commands = validateCommands(root, errors);
   validateHelp(root, name, commands, errors);
   validateNoProductCopies(root, errors);
   validateHooks(root, errors);
@@ -301,23 +295,16 @@ function validateSkills(root, errors) {
 /**
  * The commands a plugin ships beside its skills, when it ships any.
  *
- * Claude Code reads `commands/` from the plugin root. The Codex manifest names
- * the directory exactly when it exists, so the key never points at nothing.
+ * Claude Code reads `commands/` from the plugin root. Codex reads none of it
+ * from a plugin whose root `plugin.json` is an Agent Plugins manifest, which
+ * every plugin here has, so a command is for Claude Code alone.
  *
  * Returns the command names, which the help text has to list.
  */
-function validateCommands(root, codex, errors) {
+function validateCommands(root, errors) {
   const directory = path.join(root, "commands");
   if (!fs.existsSync(directory)) {
-    if (codex && codex.commands !== undefined) {
-      errors.push(
-        `${CODEX_MANIFEST} sets "commands" but there is no commands/ directory`,
-      );
-    }
     return [];
-  }
-  if (codex && codex.commands !== "./commands/") {
-    errors.push(`${CODEX_MANIFEST} must set "commands": "./commands/"`);
   }
 
   const names = [];

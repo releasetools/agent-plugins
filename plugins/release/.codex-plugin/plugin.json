@@ -10,7 +10,6 @@
   "repository": "https://github.com/releasetools/agent-plugins",
   "license": "Apache-2.0",
   "keywords": ["release", "semver", "changelog", "git", "github", "tag"],
-  "skills": "./skills/",
   "interface": {
     "displayName": "release",
     "shortDescription": "One release, one step at a time, stopping at the first refusal",

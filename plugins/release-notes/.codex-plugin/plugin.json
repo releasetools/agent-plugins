@@ -17,8 +17,6 @@
     "git",
     "semver"
   ],
-  "skills": "./skills/",
-  "commands": "./commands/",
   "interface": {
     "displayName": "release-notes",
     "shortDescription": "Changelog entries ruled from the commits",

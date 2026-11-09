@@ -18,8 +18,6 @@
     "ci",
     "deployment"
   ],
-  "skills": "./skills/",
-  "commands": "./commands/",
   "interface": {
     "displayName": "mutex",
     "shortDescription": "Distributed locks for guarded operations",
