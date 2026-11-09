@@ -96,8 +96,6 @@ export function plugin(root, name, overrides = {}) {
     description,
     author: { name: "ReleaseTools" },
     license: "Apache-2.0",
-    skills: "./skills/",
-    commands: "./commands/",
     interface: {
       displayName: name,
       shortDescription: description,

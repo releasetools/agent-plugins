@@ -63,8 +63,6 @@ function plugin(overrides: Record<string, unknown> = {}) {
   const claude = { ...MANIFEST, ...((overrides.claude as object) ?? {}) };
   const codex = {
     ...MANIFEST,
-    skills: "./skills/",
-    commands: "./commands/",
     interface: {
       displayName: "mutex",
       shortDescription: "Distributed locks",
@@ -211,13 +209,6 @@ describe("validatePlugin", () => {
     expect(validatePlugin({ root, expected: "9.9.9" }).errors).toHaveLength(2);
   });
 
-  it("catches Codex being pointed somewhere other than skills/", () => {
-    const root = build({ codex: { skills: "./.codex-plugin/skills/" } });
-    expect(validatePlugin({ root }).errors).toEqual([
-      expect.stringContaining('"skills": "./skills/"'),
-    ]);
-  });
-
   it("catches a skill whose front matter disagrees with its directory", () => {
     const root = build({ skillName: "locks" });
     expect(validatePlugin({ root }).errors).toEqual([
@@ -291,13 +282,6 @@ describe("validatePlugin", () => {
     ]);
   });
 
-  it("catches Codex being pointed somewhere other than commands/", () => {
-    const root = build({ codex: { commands: "./prompts/" } });
-    expect(validatePlugin({ root }).errors).toEqual([
-      expect.stringContaining('"commands": "./commands/"'),
-    ]);
-  });
-
   /**
    * The commands name the helper by an absolute path the host substitutes, so
    * a helper that is not in the published tree fails at the moment it is run
@@ -317,21 +301,10 @@ describe("validatePlugin", () => {
   });
 
   it("accepts a plugin that ships skills and no commands", () => {
-    const root = build({ codex: { commands: undefined } });
-    fs.rmSync(path.join(root, "commands"), { recursive: true });
-
-    expect(validatePlugin({ root }).errors).toEqual([]);
-  });
-
-  it("catches Codex being pointed at a commands directory that is not there", () => {
     const root = build();
     fs.rmSync(path.join(root, "commands"), { recursive: true });
 
-    expect(validatePlugin({ root }).errors).toEqual([
-      expect.stringContaining(
-        'sets "commands" but there is no commands/ directory',
-      ),
-    ]);
+    expect(validatePlugin({ root }).errors).toEqual([]);
   });
 
   /**
@@ -339,7 +312,7 @@ describe("validatePlugin", () => {
    * skill is the list that has to stay complete.
    */
   it("catches a help skill that has stopped listing a skill", () => {
-    const root = build({ codex: { commands: undefined } });
+    const root = build();
     fs.rmSync(path.join(root, "commands"), { recursive: true });
     fs.mkdirSync(path.join(root, "skills", "help"));
     fs.writeFileSync(
