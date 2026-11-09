@@ -2,8 +2,8 @@
 name: release-notes
 description: >
   What a release note is, and the one test that decides whether a change
-  has one. Read by both of this plugin's commands and by anything else
-  writing an entry: /release-notes:write for one change, and
+  has one. Read by this plugin's write and prepare skills and by anything
+  else writing an entry: /release-notes:write for one change, and
   /release-notes:prepare for a release. Triggers on: release note,
   changelog entry, what a reader can observe, what goes in a release.
 ---

@@ -8,6 +8,12 @@ description: >
   or as a step in a repository's own release procedure. Triggers on:
   prepare the release, release notes for x.y.z, changelog entry for the
   release, what changed since the last release.
+argument-hint: "<version> [--path <dir>] [--at <rev>]"
+allowed-tools:
+  - Bash(node ${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs:*)
+  - Bash(node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs":*)
+  - Read
+  - Write
 ---
 
 # prepare: the release's entry
@@ -23,6 +29,10 @@ Nothing below repeats it.
 The helper is [`bin/agent-notes.mjs`](../../bin/agent-notes.mjs) at the root
 of this plugin, two directories above this file. Run it by its absolute path,
 written `<helper>` below.
+
+The version is the one the user named, about to be released. If they named
+none, ask for one. Never guess it from the commits. `--path <dir>` and
+`--at <rev>`, when given, are used where the passes below name them.
 
 ## The three passes
 
@@ -58,7 +68,9 @@ itself. They are drafted separately and nothing reconciles them. The
 repository's entry can summarise what four subtree entries said, or say
 something none of them did.
 
-**Pass 2, rule on each commit.** One call per commit:
+**Pass 2, rule on each commit.** One call per commit, and on a long range one
+subagent per commit: each needs only that commit's evidence and the one test,
+and none depends on another.
 
 ```bash
 node "<helper>" evidence <sha>
@@ -117,6 +129,11 @@ scratch file for whatever publishes the release. It refuses a version the
 changelog already carries. Pass the same `--path` you passed to `commits`, or
 the entry lands in the wrong file. `--at <rev>` dates the entry from that
 commit rather than today, for a release written up after the fact.
+
+Then say where it landed, in one line. The entry is on the screen already.
+This skill ends there: it never tags, commits, pushes or opens a pull
+request, and whatever releases the version is the user's, or another
+skill's, to run.
 
 ## A repository that writes its entries per change
 
