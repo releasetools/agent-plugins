@@ -5,6 +5,15 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.6.0 - 2026-11-09
+
+### Changed
+
+`/release-notes:draft` is gone. Run `/release-notes:prepare`, which it ran,
+with the same arguments. Codex never offered it.
+
+Codex runs `$release-notes:help`, as Claude Code runs `/release-notes:help`.
+
 ## 0.5.4 - 2026-11-09
 
 ### Fixed

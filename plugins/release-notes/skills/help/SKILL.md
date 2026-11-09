@@ -4,7 +4,9 @@ description: What the release-notes plugin does, and what it will not
 argument-hint: ""
 ---
 
-Tell the user this, in your own words but no longer, and run nothing:
+Tell the user this, in your own words but no longer, and run nothing. Name
+each entry the way their client invokes it: `/release-notes:write` in Claude
+Code, `$release-notes:write` in Codex.
 
 - `/release-notes:write` - write the release note for the change on this
   branch, into the pull request's description and into the changelog of every
@@ -12,7 +14,8 @@ Tell the user this, in your own words but no longer, and run nothing:
 - `/release-notes:prepare <version>` - collate a release's entry from the
   notes its changes declared, ruling on the ones that declared none, into
   `CHANGELOG.md` and `$GIT_DIR/RELEASE_EDITMSG`
-- `/release-notes:draft` - the old name for `prepare`, which it runs
+- `/release-notes:release-notes` - what a release note is, and the one test
+  that decides whether a change has one. The other two read it first
 
 A change declares its note in a fenced `release-note` block, and that note is
 what gets published, taken as written. A change with no block is ruled against

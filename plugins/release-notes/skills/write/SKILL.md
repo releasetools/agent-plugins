@@ -7,6 +7,15 @@ description: >
   asked for this change's release note or changelog entry, or when a change
   is about to be merged without one. Triggers on: release note for this PR,
   changelog entry for this change, note this change, write the release note.
+argument-hint: "[--pr <number>] [--base <ref>] [--path <dir>] [--none]"
+allowed-tools:
+  - Bash(node ${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs:*)
+  - Bash(node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs":*)
+  - Bash(git diff:*)
+  - Bash(git status:*)
+  - Bash(git log:*)
+  - Read
+  - Write
 ---
 
 # write: one change's note
@@ -23,6 +32,9 @@ Nothing below repeats it.
 The helper is [`bin/agent-notes.mjs`](../../bin/agent-notes.mjs) at the root
 of this plugin, two directories above this file. Run it by its absolute path,
 written `<helper>` below.
+
+`--pr`, `--base`, `--path` and `--none`, when the user gives them, are used
+where the steps below name them, unchanged.
 
 ## 1. What this change is
 

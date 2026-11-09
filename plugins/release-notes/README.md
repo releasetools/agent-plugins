@@ -47,11 +47,11 @@ pull request body.
 
 ## Commands
 
-| Command                                           |                                                                 |
-| ------------------------------------------------- | --------------------------------------------------------------- |
-| `/release-notes:write [--pr <number>]`            | This change's note, into the pull request and the changelog     |
-| `/release-notes:prepare <version> [--path <dir>]` | A release's entry, collated from the notes its changes declared |
-| `/release-notes:help`                             | What the plugin does, and what it will not                      |
+| Claude Code                                       | Codex                                             |                                                                 |
+| ------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------- |
+| `/release-notes:write [--pr <number>]`            | `$release-notes:write [--pr <number>]`            | This change's note, into the pull request and the changelog     |
+| `/release-notes:prepare <version> [--path <dir>]` | `$release-notes:prepare <version> [--path <dir>]` | A release's entry, collated from the notes its changes declared |
+| `/release-notes:help`                             | `$release-notes:help`                             | What the plugin does, and what it will not                      |
 
 ## One change at a time
 
