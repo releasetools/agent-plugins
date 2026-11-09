@@ -20,12 +20,16 @@ Read the [release-notes skill](../release-notes/SKILL.md) first. It carries
 the one test, the block, the shape of an entry and what never goes in one.
 Nothing below repeats it.
 
+The helper is [`bin/agent-notes.mjs`](../../bin/agent-notes.mjs) at the root
+of this plugin, two directories above this file. Run it by its absolute path,
+written `<helper>` below.
+
 ## The three passes
 
 **Pass 1, scope.** One call, which also clears the scratch file:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs" commits
+node "<helper>" commits
 ```
 
 It prints the previous tag, the range, and a row per commit. When
@@ -57,7 +61,7 @@ something none of them did.
 **Pass 2, rule on each commit.** One call per commit:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs" evidence <sha>
+node "<helper>" evidence <sha>
 ```
 
 Then one row per commit, and show the table:
@@ -104,7 +108,7 @@ Write the body to the `scratchFile` path from pass 1, show it to the user,
 then:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs" section <version>
+node "<helper>" section <version>
 ```
 
 That puts it in `CHANGELOG.md` under `## <version> - <date>`, above every
