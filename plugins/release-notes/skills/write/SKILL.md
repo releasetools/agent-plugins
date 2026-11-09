@@ -20,10 +20,14 @@ Read the [release-notes skill](../release-notes/SKILL.md) first. It carries
 the one test, the block, the shape of an entry and what never goes in one.
 Nothing below repeats it.
 
+The helper is [`bin/agent-notes.mjs`](../../bin/agent-notes.mjs) at the root
+of this plugin, two directories above this file. Run it by its absolute path,
+written `<helper>` below.
+
 ## 1. What this change is
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs" change
+node "<helper>" change
 ```
 
 One call. It prints the fork point this branch is measured from, the projects
@@ -67,7 +71,7 @@ the category, and the version is the manifest's business.
 ## 3. Put it where it survives
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/agent-notes.mjs" note --pr <number>
+node "<helper>" note --pr <number>
 ```
 
 That reads `NOTE_EDITMSG` and does two things with it. The block goes in the

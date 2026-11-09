@@ -5,6 +5,17 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.5.4 - 2026-11-09
+
+### Fixed
+
+The `prepare` and `write` skills name their helper by its path from the skill
+file, `../../bin/agent-notes.mjs`, which Codex resolves against the skill's
+directory. They named it through `CLAUDE_PLUGIN_ROOT`, which Codex sets only
+for hooks, so a Codex model that ran the command as written called
+`/bin/agent-notes.mjs` and failed. The commands Claude Code runs keep
+`CLAUDE_PLUGIN_ROOT`, which it fills in.
+
 ## 0.5.3 - 2026-11-05
 
 ### Changed
