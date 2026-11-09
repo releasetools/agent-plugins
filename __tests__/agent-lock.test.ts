@@ -848,9 +848,9 @@ describe("what the commands invoke", () => {
         path.join(skillsDir, entry, "SKILL.md"),
         "utf8",
       );
-      return [...text.matchAll(/(?:<helper>|agent-lock\.mjs)"\s+([a-z-]+)/g)].map(
-        (match) => [entry, match[1]] as [string, string],
-      );
+      return [
+        ...text.matchAll(/(?:<helper>|agent-lock\.mjs)"\s+([a-z-]+)/g),
+      ].map((match) => [entry, match[1]] as [string, string]);
     });
 
   it("finds a subcommand in the skills at all", () => {
