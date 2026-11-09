@@ -7,11 +7,15 @@ allowed-tools:
   - Bash(node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs":*)
 ---
 
-Run this once, with the first word of `$ARGUMENTS` as the id and a number
-after it, if given, as the seconds:
+The helper is [`agent-lock.mjs`](../mutex/agent-lock.mjs), in the mutex
+skill's directory beside this one. Run it by its absolute path, written
+`<helper>` below.
+
+Run this once, with the first word of the user's arguments as the id and a
+number after it, if given, as the seconds:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs" renew <id> --expiration <seconds>
+node "<helper>" renew <id> --expiration <seconds>
 ```
 
 Say in one line when it now expires. Renewing only adds time, and it is strict:

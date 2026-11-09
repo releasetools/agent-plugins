@@ -131,42 +131,47 @@ describe("the plugin this repository publishes", () => {
   });
 
   /**
-   * The two skills answer different questions: naming decides which lock an
-   * operation takes and what it is called, mutex decides everything around a
-   * lock being taken. An unexpected third is a skill every agent starts
-   * loading, so it has to be named here first.
+   * Two skills carry the judgment: naming decides which lock an operation
+   * takes and what it is called, mutex decides everything around a lock being
+   * taken. The rest are the slash menu, one helper invocation each, in both
+   * clients. Starting or stopping the pooled server, choosing profiles and
+   * deleting expired locks stay the user's to run, so they get no skill. An
+   * unexpected skill is one every agent starts loading, so it has to be named
+   * here first.
    */
-  it("ships the mutex and naming skills, and nothing else", () => {
+  it("ships the two judgment skills and the slash menu, and nothing else", () => {
     const skills = fs
       .readdirSync(path.join(PLUGIN, "skills"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
 
-    expect(skills).toEqual(["mutex", "naming"]);
+    expect(skills).toEqual([
+      "callsign",
+      "help",
+      "lock",
+      "mutex",
+      "naming",
+      "preflight",
+      "renew",
+      "status",
+      "unlock",
+    ]);
   });
 
-  it("gives the agents a slash menu, not just a skill", () => {
-    const commands = fs
-      .readdirSync(path.join(PLUGIN, "commands"))
-      .filter((entry) => entry.endsWith(".md"))
-      .map((entry) => entry.replace(/\.md$/, ""));
-
-    expect(commands).toEqual(
-      expect.arrayContaining([
-        "preflight",
-        "lock",
-        "unlock",
-        "renew",
-        "status",
-        "help",
-      ]),
+  /**
+   * `preflight --grant` widens what the agent may run without asking, so only
+   * the user starts it. Claude Code reads `disable-model-invocation`, and Codex
+   * reads the skill's `agents/openai.yaml`.
+   */
+  it("runs preflight only when it is called by name", () => {
+    const skill = path.join(PLUGIN, "skills", "preflight");
+    expect(fs.readFileSync(path.join(skill, "SKILL.md"), "utf8")).toMatch(
+      /^disable-model-invocation: true$/m,
     );
-    // Starting or stopping the pooled server, choosing profiles and deleting
-    // expired locks stay the user's to run, so they get no command.
-    expect(commands).not.toEqual(
-      expect.arrayContaining(["server", "profile", "prune"]),
-    );
+    expect(
+      fs.readFileSync(path.join(skill, "agents", "openai.yaml"), "utf8"),
+    ).toMatch(/^\s+allow_implicit_invocation: false$/m);
   });
 
   it("keeps the two manifests on the same version", () => {
@@ -297,6 +302,24 @@ describe("validatePlugin", () => {
 
     expect(validatePlugin({ root }).errors).toEqual([
       expect.stringContaining("commands/lock.md references a missing file"),
+    ]);
+  });
+
+  /**
+   * A skill's `allowed-tools` names the helper the same way, and Claude Code
+   * substitutes it there too.
+   */
+  it("catches a skill naming a helper that is not there", () => {
+    const root = build();
+    fs.mkdirSync(path.join(root, "skills", "lock"));
+    fs.writeFileSync(
+      path.join(root, "skills", "lock", "SKILL.md"),
+      "---\nname: lock\ndescription: Take a lock\n" +
+        "allowed-tools:\n  - Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/mutex/moved.mjs:*)\n---\n",
+    );
+
+    expect(validatePlugin({ root }).errors).toEqual([
+      expect.stringContaining("skills/lock/SKILL.md references a missing file"),
     ]);
   });
 

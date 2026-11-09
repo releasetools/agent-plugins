@@ -8,9 +8,11 @@ expected - the skill covers the decisions, this covers the details.
 
 `agent-lock.mjs` sits next to this file, inside the plugin.
 
-- **Claude Code** substitutes `${CLAUDE_PLUGIN_ROOT}`, so the commands invoke
-  `node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs"` and nothing has to
-  be searched for.
+- **Claude Code** substitutes `${CLAUDE_PLUGIN_ROOT}` in a skill's
+  `allowed-tools`, so the skills that run the helper pre-approve
+  `node "${CLAUDE_PLUGIN_ROOT}/skills/mutex/agent-lock.mjs"`.
+- Each of those skills names it as `../mutex/agent-lock.mjs`, relative to
+  its own `SKILL.md`, which Codex resolves too.
 - **Everywhere else** it is `agent-lock.mjs` in the same directory as this
   file - the skill directory the agent loaded, which is
   `~/.hermes/plugins/mutex/skills/mutex/`, `~/.gemini/config/plugins/mutex/skills/mutex/`,

@@ -829,28 +829,31 @@ describe("the table", () => {
 });
 
 /**
- * The command files name a subcommand, and nothing else checks that the helper
- * has one: `/mutex:extend` shipped invoking `extend` while the helper only
- * answered to `renew`, and the failure was a usage message where a renewal
- * should have been.
+ * The slash-menu skills name a subcommand, and nothing else checks that the
+ * helper has one: `/mutex:extend` shipped invoking `extend` while the helper
+ * only answered to `renew`, and the failure was a usage message where a
+ * renewal should have been.
  */
 describe("what the commands invoke", () => {
-  const commandsDir = path.resolve(
+  const skillsDir = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../plugins/mutex/commands",
+    "../plugins/mutex/skills",
   );
 
   const invoked = fs
-    .readdirSync(commandsDir)
-    .filter((entry) => entry.endsWith(".md"))
+    .readdirSync(skillsDir)
+    .filter((entry) => fs.existsSync(path.join(skillsDir, entry, "SKILL.md")))
     .flatMap((entry) => {
-      const text = fs.readFileSync(path.join(commandsDir, entry), "utf8");
-      return [...text.matchAll(/agent-lock\.mjs"?\s+([a-z-]+)/g)].map(
+      const text = fs.readFileSync(
+        path.join(skillsDir, entry, "SKILL.md"),
+        "utf8",
+      );
+      return [...text.matchAll(/node "<helper>"\s+([a-z-]+)/g)].map(
         (match) => [entry, match[1]] as [string, string],
       );
     });
 
-  it("finds a subcommand in the command files at all", () => {
+  it("finds a subcommand in the skills at all", () => {
     expect(invoked.length).toBeGreaterThan(2);
   });
 

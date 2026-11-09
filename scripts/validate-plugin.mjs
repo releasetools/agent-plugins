@@ -289,6 +289,7 @@ function validateSkills(root, errors) {
     if (!/^description:/m.test(front[1])) {
       errors.push(`skills/${directory.name}/SKILL.md has no description`);
     }
+    validatePluginRoot(root, `skills/${directory.name}/SKILL.md`, text, errors);
   }
 }
 
