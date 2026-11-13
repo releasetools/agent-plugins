@@ -1,14 +1,4 @@
----
-name: release-notes
-description: >
-  What a release note is, and the one test that decides whether a change
-  has one. Read by this plugin's write and prepare skills and by anything
-  else writing an entry: /release-notes:write for one change, and
-  /release-notes:prepare for a release. Triggers on: release note,
-  changelog entry, what a reader can observe, what goes in a release.
----
-
-# release-notes: what a reader can observe
+# Release notes: what a reader can observe
 
 A changelog is read by somebody on the previous version deciding whether this
 one affects them. Everything here follows from that.
@@ -86,9 +76,9 @@ editable by anyone and a scratch file is gone with the worktree.
 
 | stage       | who writes it                              | where it lands                                                            |
 | ----------- | ------------------------------------------ | ------------------------------------------------------------------------- |
-| the change  | `/release-notes:write`                     | `$GIT_DIR/NOTE_EDITMSG`, then the block in the pull request's description |
+| the change  | `/release:write`                           | `$GIT_DIR/NOTE_EDITMSG`, then the block in the pull request's description |
 | the merge   | whatever merges, `origin:merge` among them | the block in the commit body on the default branch                        |
-| the release | `/release-notes:prepare`                   | the changelog section, and `$GIT_DIR/RELEASE_EDITMSG`                     |
+| the release | `/release:prepare`                         | the changelog section, and `$GIT_DIR/RELEASE_EDITMSG`                     |
 | the publish | the release workflow                       | the release body                                                          |
 
 Write it at the earliest stage that has the author's context, which is the

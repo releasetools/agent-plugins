@@ -16,6 +16,7 @@
  */
 
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { syncCatalogs } from "../scripts/sync-catalogs.mjs";
 import { marketplace, plugin, readJson, writeJson } from "./fixtures.mjs";
@@ -47,6 +48,25 @@ describe("syncCatalogs", () => {
     for (const root of roots.splice(0)) {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("ships the pinned config reader with release without a runtime install", () => {
+    const root = build(["release", {}]);
+    const relative = "plugins/release/bin/releasetools-config.cjs";
+    const target = path.join(root, relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, "stale reader\n");
+    const published = createRequire(import.meta.url).resolve(
+      "@releasetools/config",
+    );
+
+    expect(syncCatalogs({ root, check: true }).changed).toContain(relative);
+    expect(fs.readFileSync(target, "utf8")).toBe("stale reader\n");
+    expect(syncCatalogs({ root }).errors).toEqual([]);
+    expect(fs.readFileSync(target, "utf8")).toBe(
+      fs.readFileSync(published, "utf8"),
+    );
+    expect(syncCatalogs({ root, check: true }).changed).toEqual([]);
   });
 
   /**

@@ -21,7 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 // @ts-expect-error - plugin tooling, deliberately plain JS with no types
-import * as notes from "../plugins/release-notes/bin/agent-notes.mjs";
+import * as notes from "../plugins/release/bin/agent-notes.mjs";
 
 const {
   PATCH_LINE_LIMIT,
@@ -882,7 +882,7 @@ describe("a stacked pull request", () => {
     path.dirname(fileURLToPath(import.meta.url)),
     "..",
     "plugins",
-    "release-notes",
+    "release",
     "bin",
     "agent-notes.mjs",
   );

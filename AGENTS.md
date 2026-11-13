@@ -6,7 +6,7 @@ release. Nothing is copied in from anywhere else.
 
 Four kinds of file are generated and must not be hand-edited: the two
 catalogs, each plugin's `plugin.json`, and
-`plugins/release-notes/bin/releasetools-config.cjs`, which `npm run sync`
+`plugins/release/bin/releasetools-config.cjs`, which `npm run sync`
 copies from the `@releasetools/config` version pinned in `package.json`. A
 plugin installs as a clone of its marketplace and never runs `npm install`, so
 that reader cannot be a dependency at runtime. Change it in
@@ -86,7 +86,7 @@ command or changing what one does is breaking, marked with a `!`.
 `bump-from-type` turns those into a number, and nothing derives a major: a
 release increments one because somebody was asked and said so.
 
-Write the entry with `/release-notes:write`, from the plugin this repository
+Write the entry with `/release:write`, from the plugin this repository
 publishes. It reads the same `.releasetools.yaml`, so the note lands in the
 changelog of the plugin the change is in, and it puts the same note in the
 pull request as a `release-note` block for whatever collates the release.
@@ -98,7 +98,7 @@ Antigravity clone this repository and read `plugin.json` at the plugin root, so
 both install from GitHub with no copying and no checkout of your own:
 
 ```shell
-hermes plugins install releasetools/agent-plugins/plugins/release-notes
+hermes plugins install releasetools/agent-plugins/plugins/release
 agy plugin install https://github.com/releasetools/agent-plugins
 ```
 
@@ -175,14 +175,14 @@ at 0.1.0 and the CLI at 1.4.0 - so nobody ran into it. The contract suite covers
 that flag now, but it would have found this after the fact; the rule above is
 what stops it being written in the first place.
 
-## release-notes, and the git it reads
+## Release notes, and the git they read
 
-`plugins/release-notes/bin/releasetools-config.cjs` is `@releasetools/config` from
+`plugins/release/bin/releasetools-config.cjs` is `@releasetools/config` from
 `releasetools/actions`, carried here byte for byte: the guards there and this
 plugin have to answer the same way about which project a change belongs to.
 Change it there, then copy it.
 
-`plugins/release-notes/bin/agent-notes.mjs` shells out to
+`plugins/release/bin/agent-notes.mjs` shells out to
 `git`, and to `gh` only behind `--pr`. Neither is pinned and neither is
 installed by the plugin, so there is no released version to check a change
 against the way mutex needs one.
@@ -202,13 +202,9 @@ other repositories and cannot be found from here.
 ## The website
 
 [releasetools/website](https://github.com/releasetools/website) documents the
-ReleaseTools tools, and both plugins are on it. `docs/mutex.md` carries an
-`## Agent plugin` section covering the marketplace install commands, both
-skills, and every entry in the slash menu, alongside the CLI and the Action.
-`release-notes` has `docs/release-notes.md` to itself, since no CLI and no
-Action sit behind it: the install commands for all four clients, the command
-table, the two files it writes, and what it will not do. There is no
-`docs/agent-plugins.md`, and a third page would only repeat them.
+plugins. Its installation commands and command tables must match the published
+plugins. Release-note documentation covers the skills inside `release` and
+the files those skills write.
 
 **A release that changes what a user sees needs a pull request there too**: the
 install commands, what is in the slash menu, what the skill will and will not

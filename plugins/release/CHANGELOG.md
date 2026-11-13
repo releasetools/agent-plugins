@@ -2,6 +2,21 @@
 
 Newest release first. Each says what changed, and the choices behind it.
 
+The standalone release-notes plugin's releases are in
+[RELEASE-NOTES-CHANGELOG.md](RELEASE-NOTES-CHANGELOG.md).
+
+## 0.6.0 - 2026-11-13
+
+### Changed
+
+Release notes are included in `release@release-tools`. Install `release` and
+remove the standalone `release-notes` plugin. Use `/release:write` for a
+change's note and `/release:prepare` for a release's changelog, with the same
+arguments; Codex uses `$release:write` and `$release:prepare`. Both read the
+shared rules internally; the rules have no slash command. Help is available
+as `release:help`. `/release:release` prepares its changelog with the bundled
+skill.
+
 ## 0.5.0 - 2026-11-09
 
 `/release:preflight user` or `/release:preflight project` adds the Claude

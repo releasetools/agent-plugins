@@ -1,7 +1,7 @@
 {
   "name": "release",
-  "version": "0.5.0",
-  "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
+  "version": "0.6.0",
+  "description": "Write release notes, prepare changelogs, and cut releases through publication",
   "author": {
     "name": "ReleaseTools",
     "url": "https://github.com/releasetools"
@@ -9,5 +9,13 @@
   "homepage": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release#readme",
   "repository": "https://github.com/releasetools/agent-plugins",
   "license": "Apache-2.0",
-  "keywords": ["release", "semver", "changelog", "git", "github", "tag"]
+  "keywords": [
+    "release",
+    "release-notes",
+    "semver",
+    "changelog",
+    "git",
+    "github",
+    "tag"
+  ]
 }

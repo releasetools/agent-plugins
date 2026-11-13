@@ -25,7 +25,7 @@ why. Everything this does follows from that: it is run on a branch, before
 the change is merged, and it writes what it drafts in the two places a note
 survives.
 
-Read the [release-notes skill](../release-notes/SKILL.md) first. It carries
+Read the [release-note rules](../../references/release-notes.md) first. It carries
 the one test, the block, the shape of an entry and what never goes in one.
 Nothing below repeats it.
 

@@ -30,16 +30,17 @@ in `plugins/`; `hermes` takes the one the subdirectory names.
 
 ```shell
 agy plugin install https://github.com/releasetools/agent-plugins
-hermes plugins install releasetools/agent-plugins/plugins/release-notes
+hermes plugins install releasetools/agent-plugins/plugins/release
 ```
 
 ## What is published
 
-| Plugin          | What it does                                                          |
-| --------------- | --------------------------------------------------------------------- |
-| `mutex`         | Guard a shared resource with a distributed lock, using the mutex CLI  |
-| `release-notes` | Draft a release's changelog entry from the commits since the last tag |
-| `release`       | Cut a release: prechecks, notes, bump, pull request, merge, tag       |
+| Plugin    | What it does                                                         |
+| --------- | -------------------------------------------------------------------- |
+| `mutex`   | Guard a shared resource with a distributed lock, using the mutex CLI |
+| `release` | Write release notes, prepare changelogs, and cut releases            |
+
+For release notes, install `release@release-tools`. The [release README](plugins/release/README.md#from-release-notes) maps the former `release-notes` commands to their names in `release`.
 
 The plugins live here: `plugins/<name>/` is the source, not a copy of one, and
 a merge to `main` is the release. See [AGENTS.md](./AGENTS.md) for how to change
