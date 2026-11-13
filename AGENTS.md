@@ -89,7 +89,9 @@ release increments one because somebody was asked and said so.
 Write the entry with `/release:write`, from the plugin this repository
 publishes. It reads the same `.releasetools.yaml`, so the note lands in the
 changelog of the plugin the change is in, and it puts the same note in the
-pull request as a `release-note` block for whatever collates the release.
+pull request as a `release-note` block for whatever collates the release. Put
+the same block in the branch commit message too, so the note is in the
+history whichever way the pull request merges.
 
 ## The other two agents
 
