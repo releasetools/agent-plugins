@@ -56,7 +56,10 @@ the file is the only thing standing between those two outcomes.
 that `npx @releasetools/config adopt` writes a starter one, and stop. Nothing
 here guesses at a project.
 
-`--base <ref>` when the branch is not against the default branch. `--path
+`--pr <number>` once the pull request exists: the branch is then measured
+from the branch the pull request merges into, which for a stacked pull
+request is the one below it. Before then, `--base <ref>` when the branch is
+not against the default branch. `--base` wins where both are given. `--path
 <dir>` to act on one project when the change touched several.
 
 ## 2. Rule on the change
@@ -94,7 +97,8 @@ and an entry already there is left alone so a second run changes nothing.
 
 `--none` writes the `NONE` block and no entry. Leave `--pr` off before the
 pull request exists: the block then has to reach the description another way,
-and the note is still in `NOTE_EDITMSG` either way.
+and the note is still in `NOTE_EDITMSG` either way. This measures the branch
+again, so give it the `--base` that step 1 had.
 
 Read what it prints. `skipped` is the part that needs you:
 

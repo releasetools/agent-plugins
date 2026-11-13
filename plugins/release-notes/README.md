@@ -40,10 +40,12 @@ subdirectory names.
 
 ## What it needs
 
-`git`, and a repository with commits. `gh` is optional: `--pr` fetches the pull
-requests a commit landed through, which is worth a call under a merge workflow
-and nothing at all under squash merges, where the commit body already is the
-pull request body.
+`git`, and a repository with commits. `gh` is optional, and only two flags
+call it. `--pr` reads the pull request a change is in: the branch it merges
+into, which the change is measured from, and the description the block goes
+in. `--pulls` fetches the pull requests a commit landed through, which is worth
+a call under a merge workflow and nothing at all under squash merges, where
+the commit body already is the pull request body.
 
 ## Commands
 

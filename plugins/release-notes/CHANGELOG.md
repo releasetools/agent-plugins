@@ -5,6 +5,27 @@ Newest release first. Each says what changed, and the choices behind it.
 Everything up to 0.3.0 was read back out of the commits, because the plugin
 shipped three releases before it kept a changelog.
 
+## 0.6.1 - 2026-11-13
+
+### Fixed
+
+On a stacked pull request, `/release-notes:write --pr <number>` measures the
+change from the branch the pull request merges into. The note, the changelog
+section, the projects and the version the change asks for then cover that pull
+request alone, not the branch below it as well. Before the pull request
+exists, give `--base <ref>` instead.
+
+### Choices
+
+`--base` wins over `--pr`, because an explicit base is what the author said.
+A run that gives both, the workaround before this fix, keeps its range.
+
+`--pr` covers a pull request that merges into the branch below it. It does
+not cover a pull request that GitHub retargets to the default branch after the
+parent squash-merges. The squash commit is not the parent's commits, so they
+stay in the range. Rebase the branch onto the default branch, or give `--base`
+the last commit of the parent.
+
 ## 0.6.0 - 2026-11-09
 
 ### Changed
