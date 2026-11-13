@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "release",
-  "version": "0.5.0",
-  "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
+  "version": "0.6.0",
+  "description": "Write release notes, prepare changelogs, and cut releases through publication",
   "author": {
     "name": "ReleaseTools",
     "url": "https://github.com/releasetools"
@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "keywords": [
     "release",
+    "release-notes",
     "semver",
     "changelog",
     "git",

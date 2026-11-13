@@ -22,7 +22,7 @@ A release is the notes its changes declared, in one section, in the order a
 reader scans. What is not declared is ruled from the diff, which is the
 fallback rather than the method.
 
-Read the [release-notes skill](../release-notes/SKILL.md) first. It carries
+Read the [release-note rules](../../references/release-notes.md) first. It carries
 the one test, the block, the shape of an entry and what never goes in one.
 Nothing below repeats it.
 

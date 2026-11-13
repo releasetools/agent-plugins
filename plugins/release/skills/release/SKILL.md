@@ -157,7 +157,8 @@ checking their state. An existing name belonging to another task is a refusal.
 Run all preparation commands and local tests here. Dependency installation
 and build output also belong here, outside the main checkout.
 
-Then the entry, with `/release-notes:prepare <version> --path <path>`. It
+Then read the bundled [prepare skill](../prepare/SKILL.md) and run it as
+`/release:prepare <version> --path <path>`. It
 rules on the changes to that project since the previous tag, takes the note
 each one declared, writes `<path>/CHANGELOG.md` and leaves the same body in
 the `scratchFile` it prints: `$GIT_DIR/RELEASE_EDITMSG` for a project at the

@@ -1,7 +1,7 @@
 {
   "name": "release",
-  "version": "0.5.0",
-  "description": "Cut a release: prechecks, notes, version bump, pull request, merge, tag, publish",
+  "version": "0.6.0",
+  "description": "Write release notes, prepare changelogs, and cut releases through publication",
   "author": {
     "name": "ReleaseTools",
     "url": "https://github.com/releasetools"
@@ -9,14 +9,24 @@
   "homepage": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release#readme",
   "repository": "https://github.com/releasetools/agent-plugins",
   "license": "Apache-2.0",
-  "keywords": ["release", "semver", "changelog", "git", "github", "tag"],
+  "keywords": [
+    "release",
+    "release-notes",
+    "semver",
+    "changelog",
+    "git",
+    "github",
+    "tag"
+  ],
   "interface": {
     "displayName": "release",
-    "shortDescription": "One release, one step at a time, stopping at the first refusal",
-    "longDescription": "Run the steps a release takes, in order, from what the repository declares in .releasetools.yaml: the prechecks that have to pass, the changelog entry, the version bump through the command the project declares, the pull request and its checks, the merge, the wait for the merged commit to go green, and publication: pushing the tag, or dispatching the workflow that creates it, as the repository declares. Every step is one command whose output is read before the next one runs, and the first refusal stops the release rather than being worked around.",
+    "shortDescription": "Write release notes and cut releases",
+    "longDescription": "Write a change's release note into its pull request and each affected project's changelog, or prepare a release entry from the notes its changes declare. Cut a release using .releasetools.yaml: check prerequisites, prepare the changelog, bump the version, open and merge the pull request, verify the merged commit, and publish by tag or workflow dispatch. Each release step stops at the first refusal.",
     "developerName": "ReleaseTools",
     "category": "Developer Tools",
     "capabilities": [
+      "Write a change's note into its pull request and changelog",
+      "Prepare a release's changelog from the notes its changes declare",
       "Run a release's steps in order, stopping at the first refusal",
       "Bump the version with the command the project declares",
       "Publish only a commit whose checks already passed, by tag or by dispatch",
@@ -24,8 +34,9 @@
     ],
     "websiteURL": "https://github.com/releasetools/agent-plugins/tree/main/plugins/release#readme",
     "defaultPrompt": [
+      "Write the release note for this change.",
+      "Prepare the changelog for 1.2.3.",
       "Release 1.2.3.",
-      "Cut a release of this repository.",
       "Ship 0.4.0 and wait for it to publish."
     ]
   }

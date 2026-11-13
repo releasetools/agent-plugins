@@ -36,7 +36,7 @@ import {
 import { REPOSITORY_ROOT, validatePlugin } from "./validate-plugin.mjs";
 
 /**
- * The reader the release-notes plugin carries, and where it comes from.
+ * The reader the release plugin carries, and where it comes from.
  *
  * A plugin installs as a clone of its marketplace and never runs `npm
  * install`, so the file cannot be a dependency at runtime. It is generated
@@ -45,7 +45,7 @@ import { REPOSITORY_ROOT, validatePlugin } from "./validate-plugin.mjs";
  * disagree about which project a change belongs to, which lands a release
  * note in the wrong changelog.
  */
-const VENDORED = `${PLUGINS_DIR}/release-notes/bin/releasetools-config.cjs`;
+const VENDORED = `${PLUGINS_DIR}/release/bin/releasetools-config.cjs`;
 
 /**
  * Rewrites both catalogs from the plugins in `plugins/`.
@@ -54,7 +54,7 @@ const VENDORED = `${PLUGINS_DIR}/release-notes/bin/releasetools-config.cjs`;
  *     npm run sync -- --check   say whether they are already right
  *
  * Four kinds of file are generated: the two catalogs, each plugin's
- * `plugin.json`, and the reader the release-notes plugin carries. The first
+ * `plugin.json`, and the reader the release plugin carries. The first
  * three are derived from that plugin's own manifests, in
  * the schema the reader expects, so no two agents can end up describing
  * different things - which is the failure no vendor's validator can see, since
