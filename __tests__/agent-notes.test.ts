@@ -19,6 +19,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 // @ts-expect-error - plugin tooling, deliberately plain JS with no types
 import * as notes from "../plugins/release-notes/bin/agent-notes.mjs";
 
@@ -873,6 +874,145 @@ describe("one change, from the branch it is on", () => {
 
     expect(result.wrote).toEqual([]);
     expect(result.skipped[0].why).toContain("collates");
+  });
+});
+
+describe("a stacked pull request", () => {
+  const HELPER = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "plugins",
+    "release-notes",
+    "bin",
+    "agent-notes.mjs",
+  );
+
+  // `--pr` asks gh for the branch a pull request merges into, and `note --pr`
+  // also reads and edits its description. This gh answers all three for one
+  // pull request that merges into `base`, and logs every call it gets.
+  function stubGh(base: string) {
+    const bin = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gh-")));
+    repositories.push(bin);
+    const log = path.join(bin, "calls");
+    fs.writeFileSync(
+      path.join(bin, "gh"),
+      `#!/bin/sh\nprintf '%s\\n' "$*" >> ${JSON.stringify(log)}\ncase "$*" in\n  "pr edit"*) exit 0;;\n  *baseRefName*) echo ${base};;\n  *body*) echo;;\n  *) exit 1;;\nesac\n`,
+    );
+    fs.chmodSync(path.join(bin, "gh"), 0o755);
+    return { bin, log };
+  }
+
+  // The helper runs as its own process here, because a PATH changed inside a
+  // test does not reach the gh that the helper starts.
+  function cli(root: string, bin: string, argv: string[]) {
+    const result = spawnSync(process.execPath, [HELPER, ...argv], {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+      },
+    });
+    return { code: result.status, out: result.stdout, err: result.stderr };
+  }
+
+  function cliJson(root: string, bin: string, argv: string[]) {
+    const result = cli(root, bin, argv);
+    expect(result.err).toBe("");
+    expect(result.code).toBe(0);
+    return JSON.parse(result.out);
+  }
+
+  // main holds p1 and p2 at 0.1.0. Branch a adds a feature to p1 with its own
+  // note, and branch b, on top of a, fixes p2. The pull request is b's, and it
+  // merges into a.
+  function stacked(): string {
+    const root = repository();
+    declare(
+      root,
+      "projects:\n  - path:\n      - plugins/p1\n      - plugins/p2\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+    );
+    const at = (name: string, version: string) => ({
+      [`plugins/${name}/plugin.json`]: `${JSON.stringify({ version })}\n`,
+    });
+    commit(root, "feat: two projects", {
+      ...at("p1", "0.1.0"),
+      ...at("p2", "0.1.0"),
+      "plugins/p1/CHANGELOG.md": "# p1\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n",
+      "plugins/p2/CHANGELOG.md": "# p2\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n",
+    });
+    git(root, ["switch", "--quiet", "--create", "a"]);
+    commit(
+      root,
+      "feat(p1): a new feature\n\n```release-note\np1 has a new feature.\n```\n",
+      { ...at("p1", "0.2.0"), "plugins/p1/feature.txt": "feature\n" },
+    );
+    git(root, ["update-ref", "refs/remotes/origin/a", "a"]);
+    git(root, ["switch", "--quiet", "--create", "b"]);
+    commit(root, "fix(p2): refuse a bad input", {
+      ...at("p2", "0.1.1"),
+      "plugins/p2/fix.txt": "fix\n",
+    });
+    return root;
+  }
+
+  it("measures from the branch the pull request merges into", () => {
+    const root = stacked();
+    const gh = stubGh("a");
+
+    const change = cliJson(root, gh.bin, ["change", "--pr", "7"]);
+
+    expect(change.base).toBe("origin/a");
+    expect(change.forkPoint).toBe(git(root, ["rev-parse", "a"]).trim());
+    expect(change.requires).toBe("patch");
+    expect(change.projects.map((p: { path: string }) => p.path)).toEqual([
+      "plugins/p2",
+    ]);
+    expect(change.note).toBeNull();
+  });
+
+  it("takes --base over the pull request, without asking gh", () => {
+    const root = stacked();
+    const gh = stubGh("a");
+
+    const change = cliJson(root, gh.bin, [
+      "change",
+      "--pr",
+      "7",
+      "--base",
+      "main",
+    ]);
+
+    expect(change.base).toBe("main");
+    expect(fs.existsSync(gh.log)).toBe(false);
+  });
+
+  it("writes the entry for that pull request alone", () => {
+    const root = stacked();
+    const gh = stubGh("a");
+    cliJson(root, gh.bin, ["change", "--pr", "7"]);
+    fs.writeFileSync(notePath(root), "p2 refuses a bad input.\n");
+
+    const result = cliJson(root, gh.bin, ["note", "--pr", "7"]);
+
+    expect(result.section).toBe("Fixed");
+    expect(result.wrote.map((w: { project: string }) => w.project)).toEqual([
+      "plugins/p2",
+    ]);
+    expect(result.pullRequest).toEqual({ number: "7", changed: true });
+    expect(
+      fs.readFileSync(path.join(root, "plugins/p2/CHANGELOG.md"), "utf8"),
+    ).toContain("### Fixed\n\np2 refuses a bad input.");
+  });
+
+  it("says to fetch when the branch it merges into is not here", () => {
+    const root = stacked();
+    const gh = stubGh("gone");
+
+    const result = cli(root, gh.bin, ["change", "--pr", "7"]);
+
+    expect(result.code).toBe(2);
+    expect(result.err).toContain("origin/gone is not here");
   });
 });
 

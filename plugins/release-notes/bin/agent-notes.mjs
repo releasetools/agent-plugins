@@ -941,10 +941,16 @@ function splice(lines, start, end, inside) {
 // One change
 // ---------------------------------------------------------------------------
 
-/** The branch this change is against, from the argument or from the remote. */
-export function baseOf(cwd, given) {
+/**
+ * The branch this change is against: the argument, else the branch the pull
+ * request merges into, else the remote's default branch.
+ */
+export function baseOf(cwd, given, pullRequest) {
   if (given) {
     return given;
+  }
+  if (pullRequest) {
+    return pullRequestBase(cwd, pullRequest);
   }
   const head = git(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
     cwd,
@@ -967,6 +973,36 @@ export function baseOf(cwd, given) {
     "no base branch found; name one with --base",
     EXIT_USAGE,
   );
+}
+
+/**
+ * The remote-tracking branch a pull request merges into. A stacked pull
+ * request merges into the branch below it, so measuring it from the default
+ * branch would take in that branch's commits too.
+ */
+function pullRequestBase(cwd, number) {
+  const name = gh(cwd, [
+    "pr",
+    "view",
+    String(number),
+    "--json",
+    "baseRefName",
+    "--jq",
+    ".baseRefName",
+  ]).trim();
+  const ref = `origin/${name}`;
+  if (
+    !git(["rev-parse", "--verify", "--quiet", ref], {
+      cwd,
+      allowFailure: true,
+    })
+  ) {
+    throw new HelperError(
+      `pull request ${number} merges into '${name}', and ${ref} is not here; fetch it, or name the base with --base`,
+      EXIT_USAGE,
+    );
+  }
+  return ref;
 }
 
 /** Every file this branch touched, committed or not. */
@@ -1114,7 +1150,7 @@ function scope(shared) {
   const { cwd } = shared;
   const root = repositoryRoot(cwd);
   const config = readConfig(cwd);
-  const against = baseOf(cwd, shared.base);
+  const against = baseOf(cwd, shared.base, shared.pullRequest);
   const forkPoint = git(["merge-base", against, "HEAD"], { cwd }).trim();
   const range = `${forkPoint}..HEAD`;
   const changes = changesIn(cwd, range);
@@ -1476,17 +1512,21 @@ export function usage(invocation = "agent-notes.mjs") {
 
 One change, before it is merged:
 
-  node ${invocation} change [--base <ref>] [--path <dir>]
+  node ${invocation} change [--base <ref>] [--pr <number>] [--path <dir>]
       What this branch changes, as JSON: the fork point, the projects it
       lands in with the version and changelog each declares, every commit
       with what it declares about itself, and the note one already carries.
       Clears the note file, so a run that fails leaves nothing behind.
+      The fork point is measured from --base, else from the branch the pull
+      request named by --pr merges into, else from the remote's default
+      branch. A stacked pull request merges into the branch below it.
 
-  node ${invocation} note [--pr <number>] [--path <dir>] [--section <name>] [--none]
+  node ${invocation} note [--pr <number>] [--base <ref>] [--path <dir>] [--section <name>] [--none]
       Puts the note drafted in ${NOTE_FILENAME} where it survives: the
       release-note block in the pull request's description, and the entry in
       each changed project's changelog when the repository writes one per
-      change. --none declares that a reader can observe nothing.
+      change. It measures the branch as 'change' does, so give it the same
+      --base or --pr. --none declares that a reader can observe nothing.
 
 A release, from the changes that went into it:
 
