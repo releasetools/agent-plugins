@@ -1,6 +1,6 @@
 {
   "name": "release",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Write release notes, prepare changelogs, and cut releases through publication",
   "author": {
     "name": "ReleaseTools",

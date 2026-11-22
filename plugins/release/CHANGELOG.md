@@ -5,6 +5,15 @@ Newest release first. Each says what changed, and the choices behind it.
 The standalone release-notes plugin's releases are in
 [RELEASE-NOTES-CHANGELOG.md](RELEASE-NOTES-CHANGELOG.md).
 
+## 0.6.1 - 2026-11-22
+
+`/release:release` keeps the release pull request's title and body as the
+changelog entry. A skill that writes pull request descriptions, such as
+technical-writer's `write-pr-description` or worktrees' `describe-pr`, leaves
+them as they are. `/release:write`, run before the pull request exists, says
+to run its last step again with `--pr` once the description is written, which
+puts the `release-note` block in it.
+
 ## 0.6.0 - 2026-11-13
 
 ### Changed
