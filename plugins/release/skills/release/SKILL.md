@@ -199,7 +199,9 @@ gh pr checks <pr> --watch --fail-fast
 
 The body is the changelog entry that was just written. It is already the
 summary, already the thing a reader reviews, and writing a second one invites
-the two to disagree.
+the two to disagree. A skill that writes or checks pull request descriptions,
+such as technical-writer's `write-pr-description` or worktrees'
+`describe-pr`, leaves this title and body as they are.
 
 `--watch` blocks. On a failure, report which check failed and its URL, and
 stop. The branch and the pull request stay; nothing has been tagged and

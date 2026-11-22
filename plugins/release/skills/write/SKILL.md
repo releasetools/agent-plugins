@@ -96,9 +96,11 @@ for the version its manifest declares and the category its type asks for,
 and an entry already there is left alone so a second run changes nothing.
 
 `--none` writes the `NONE` block and no entry. Leave `--pr` off before the
-pull request exists: the block then has to reach the description another way,
-and the note is still in `NOTE_EDITMSG` either way. This measures the branch
-again, so give it the `--base` that step 1 had.
+pull request exists, and the note stays in `NOTE_EDITMSG`. Once the pull
+request is open and whatever writes its description has written it, run this
+step again with `--pr <number>`: it replaces the block in place and leaves the
+changelog entries it already wrote alone. This measures the branch again, so
+give it the `--base` that step 1 had.
 
 Read what it prints. `skipped` is the part that needs you:
 
