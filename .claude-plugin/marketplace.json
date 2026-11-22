@@ -31,7 +31,7 @@
       "name": "release",
       "source": "./plugins/release",
       "description": "Write release notes, prepare changelogs, and cut releases through publication",
-      "version": "0.6.1",
+      "version": "0.7.0",
       "author": {
         "name": "ReleaseTools",
         "url": "https://github.com/releasetools"

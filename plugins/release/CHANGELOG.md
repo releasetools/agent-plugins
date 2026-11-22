@@ -5,6 +5,16 @@ Newest release first. Each says what changed, and the choices behind it.
 The standalone release-notes plugin's releases are in
 [RELEASE-NOTES-CHANGELOG.md](RELEASE-NOTES-CHANGELOG.md).
 
+## 0.7.0 - 2026-11-22
+
+### Changed
+
+`/release:setup` is now `/release:init-repo`, and `$release:setup` in Codex is
+`$release:init-repo`. It takes the same arguments. Update saved commands and
+scripts that call `setup`. The pull request it opens gets its title and body
+from technical-writer's `write-pr-description`, and a `release-note` block
+that says `NONE`.
+
 ## 0.6.1 - 2026-11-22
 
 `/release:release` keeps the release pull request's title and body as the
