@@ -75,8 +75,10 @@ Three outcomes, and say which one this is:
 
 - **A note is already declared.** `note` in the output is it. Leave it alone
   unless the diff contradicts it, and say so if it does.
-- **A reader can observe something.** Write one note, and put it in
-  `noteFile` exactly as it should be published.
+- **A reader can observe something.** Draft one note. Then invoke the
+  `technical-writer:write-technical-prose` skill and word the draft with it,
+  as [the wording](../../references/release-notes.md#the-wording) says. Put
+  the result in `noteFile` exactly as it should be published.
 - **A reader can observe nothing.** Declare that, rather than leaving the
   question open: step 3 with `--none`.
 

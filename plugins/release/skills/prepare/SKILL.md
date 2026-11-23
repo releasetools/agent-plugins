@@ -116,6 +116,11 @@ Collapse a class only when a member of it is observable. Nine dependency
 bumps that change no behaviour are not one shorter entry, they are no entry.
 Several commits producing one observable change are one entry.
 
+Before writing the body, invoke the `technical-writer:write-technical-prose`
+skill and word each entry drafted from a `diff` row with it, as
+[the wording](../../references/release-notes.md#the-wording) says. Rows from
+a declared note stay as written.
+
 Write the body to the `scratchFile` path from pass 1, show it to the user,
 then:
 

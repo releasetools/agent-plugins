@@ -78,6 +78,10 @@ Claude Code alone.
 The note skills need Node.js 24 or newer and `git`. `gh` is needed when
 `write --pr` updates a pull request or `prepare` fetches pull request evidence.
 The config reader ships with the plugin; it needs no `npm install`.
+`write` and `prepare` word the entries they draft with the
+`write-technical-prose` skill of
+[technical-writer](https://github.com/MihaiBojin/agent-plugins/tree/main/plugins/technical-writer),
+which installs as `technical-writer@mihaibojin`.
 
 `release` also needs [releasetools/cli](https://github.com/releasetools/cli)
 v0.4.0 or newer for the checks and bump

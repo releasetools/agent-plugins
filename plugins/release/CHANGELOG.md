@@ -5,6 +5,15 @@ Newest release first. Each says what changed, and the choices behind it.
 The standalone release-notes plugin's releases are in
 [RELEASE-NOTES-CHANGELOG.md](RELEASE-NOTES-CHANGELOG.md).
 
+## 0.8.0 - 2026-11-23
+
+### Added
+
+`/release:write` and `/release:prepare` word the entries they draft with
+technical-writer's `write-technical-prose` skill, installed as
+`technical-writer@mihaibojin`. A note an author declared in a `release-note`
+block keeps its author's words.
+
 ## 0.7.0 - 2026-11-22
 
 ### Changed

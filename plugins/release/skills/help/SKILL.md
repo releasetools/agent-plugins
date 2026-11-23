@@ -38,9 +38,10 @@ It stops at the first refusal rather than working around it, and it never
 moves a tag, forces anything, or releases a version nobody named.
 
 The note skills need Node.js 24 or newer and `git`; pull request operations
-also need `gh`. `write` and `prepare` stop after writing their files or
-updating the requested pull request description. Neither commits, tags,
-pushes, publishes, or picks a version.
+also need `gh`. `write` and `prepare` word their entries with
+technical-writer's `write-technical-prose` skill. Both stop after writing
+their files or updating the requested pull request description. Neither
+commits, tags, pushes, publishes, or picks a version.
 
 `release` also needs [releasetools/cli](https://github.com/releasetools/cli)
 v0.4.0 or newer for its checks and bump, and authenticated `gh` for the pull
