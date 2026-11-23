@@ -99,11 +99,12 @@ function notePath(root: string): string {
   return notes.notePath(root);
 }
 
-function run(root: string, argv: string[]) {
+function run(root: string, argv: string[], stdin?: string) {
   let out = "";
   let err = "";
   const code = main(argv, {
     cwd: root,
+    stdin,
     stdout: {
       write: (text: string) => {
         out += text;
@@ -118,8 +119,8 @@ function run(root: string, argv: string[]) {
   return { code, out, err };
 }
 
-function json(root: string, argv: string[]) {
-  const result = run(root, argv);
+function json(root: string, argv: string[], stdin?: string) {
+  const result = run(root, argv, stdin);
   expect(result.err).toBe("");
   expect(result.code).toBe(0);
   return JSON.parse(result.out);
@@ -811,6 +812,35 @@ describe("one change, from the branch it is on", () => {
     );
   });
 
+  it("takes the note on standard input, so the agent never writes under .git", () => {
+    const root = repository();
+    declare(
+      root,
+      "projects:\n  - path: plugins/docket\n    manifest: plugin.json\n    changelog: CHANGELOG.md\n",
+    );
+    project(root, "0.2.0", "# docket\n\n## 0.1.0 - 2026-09-01\n\nFirst.\n");
+    commit(root, "feat: the project", {});
+    branch(root);
+    commit(root, "feat(docket): a second line", {
+      "plugins/docket/skills/x.md": "# x\n",
+    });
+    json(root, ["change", "--base", "main"]);
+
+    const result = json(
+      root,
+      ["note", "--base", "main", "--stdin"],
+      "Docket reads a second line.\n",
+    );
+
+    expect(result.wrote).toHaveLength(1);
+    expect(fs.readFileSync(notePath(root), "utf8")).toBe(
+      "Docket reads a second line.\n",
+    );
+    expect(
+      fs.readFileSync(path.join(root, "plugins/docket/CHANGELOG.md"), "utf8"),
+    ).toContain("Docket reads a second line.");
+  });
+
   it("refuses to write into a version that is already released, and says what to bump to", () => {
     const root = repository();
     declare(
@@ -1055,6 +1085,20 @@ describe("where the entry lands", () => {
     ]);
     expect(lines).toContain("A preamble.");
     expect(lines).toContain("The first one.");
+  });
+
+  it("takes the body on standard input, so the agent never writes under .git", () => {
+    const root = repository();
+    commit(root, "First", { "a.txt": "one\n" });
+
+    expect(run(root, ["section", "0.1.0", "--stdin"], "It runs.\n").code).toBe(
+      0,
+    );
+
+    expect(fs.readFileSync(scratchPath(root), "utf8")).toBe("It runs.\n");
+    expect(fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8")).toContain(
+      "It runs.",
+    );
   });
 
   it("leaves the same body in the scratch file, with no heading", () => {

@@ -1521,12 +1521,13 @@ One change, before it is merged:
       request named by --pr merges into, else from the remote's default
       branch. A stacked pull request merges into the branch below it.
 
-  node ${invocation} note [--pr <number>] [--base <ref>] [--path <dir>] [--section <name>] [--none]
+  node ${invocation} note [--pr <number>] [--base <ref>] [--path <dir>] [--section <name>] [--none] [--stdin]
       Puts the note drafted in ${NOTE_FILENAME} where it survives: the
       release-note block in the pull request's description, and the entry in
       each changed project's changelog when the repository writes one per
       change. It measures the branch as 'change' does, so give it the same
       --base or --pr. --none declares that a reader can observe nothing.
+      --stdin writes the note read from standard input to ${NOTE_FILENAME} first.
 
 A release, from the changes that went into it:
 
@@ -1543,12 +1544,14 @@ A release, from the changes that went into it:
       --pulls adds the pull requests it landed through, each with its own
       block, at one API call.
 
-  node ${invocation} section <version> [--at <rev>]
+  node ${invocation} section <version> [--at <rev>] [--stdin]
       Reads the body from the scratch file, puts it in CHANGELOG.md under
       '## <version> - <date>' above every older release, and normalises the
       scratch file to the same bytes.
       --at dates the entry from that commit rather than today, for a release
       written up after the fact.
+      --stdin writes the body read from standard input to the scratch file
+      first.
 
   --path <dir>
       On 'commits' and 'section': draft for one subtree instead of the whole
@@ -1583,6 +1586,7 @@ export function main(argv, options = {}) {
         pr: { type: "string" },
         pulls: { type: "boolean" },
         none: { type: "boolean" },
+        stdin: { type: "boolean" },
         help: { type: "boolean", short: "h" },
       },
       allowPositionals: true,
@@ -1613,6 +1617,11 @@ export function main(argv, options = {}) {
     stdout,
     stderr,
   };
+  // The agent pipes the text in, because Claude Code refuses its own writes under .git.
+  const piped =
+    values.stdin === true
+      ? (options.stdin ?? fs.readFileSync(0, "utf8"))
+      : undefined;
 
   try {
     shared.subtree = readSubtree(values.path?.trim() || undefined, shared.cwd);
@@ -1628,10 +1637,16 @@ export function main(argv, options = {}) {
         if (!positionals[1]) {
           throw new HelperError("'section' needs a version", EXIT_USAGE);
         }
+        if (piped !== undefined) {
+          fs.writeFileSync(scratchPath(shared.cwd, shared.subtree), piped);
+        }
         return commandWrite(positionals[1], shared);
       case "change":
         return commandChange(shared);
       case "note":
+        if (piped !== undefined) {
+          fs.writeFileSync(notePath(shared.cwd), piped);
+        }
         return commandNote(shared);
       default:
         write(

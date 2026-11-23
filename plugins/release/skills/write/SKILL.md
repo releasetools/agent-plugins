@@ -77,8 +77,9 @@ Three outcomes, and say which one this is:
   unless the diff contradicts it, and say so if it does.
 - **A reader can observe something.** Draft one note. Then invoke the
   `technical-writer:write-technical-prose` skill and word the draft with it,
-  as [the wording](../../references/release-notes.md#the-wording) says. Put
-  the result in `noteFile` exactly as it should be published.
+  as [the wording](../../references/release-notes.md#the-wording) says. The
+  result is the note exactly as it should be published, and step 3 takes it
+  on standard input.
 - **A reader can observe nothing.** Declare that, rather than leaving the
   question open: step 3 with `--none`.
 
@@ -88,10 +89,14 @@ the category, and the version is the manifest's business.
 ## 3. Put it where it survives
 
 ```bash
-node "<helper>" note --pr <number>
+node "<helper>" note --stdin --pr <number> <<'EOF'
+<the note>
+EOF
 ```
 
-That reads `NOTE_EDITMSG` and does two things with it. The block goes in the
+`--stdin` writes the note to `NOTE_EDITMSG`, which is under `.git`, where
+Claude Code refuses a write of its own. Never write that file directly. Then
+the helper reads `NOTE_EDITMSG` and does two things with it. The block goes in the
 pull request's description, replacing one already there rather than adding a
 second. The entry goes in each changed project's changelog, under the section
 for the version its manifest declares and the category its type asks for,

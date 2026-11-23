@@ -5,6 +5,17 @@ Newest release first. Each says what changed, and the choices behind it.
 The standalone release-notes plugin's releases are in
 [RELEASE-NOTES-CHANGELOG.md](RELEASE-NOTES-CHANGELOG.md).
 
+## 0.8.1 - 2026-11-23
+
+### Fixed
+
+`/release:write` and `/release:prepare` pass the note and the release body
+to the helper on standard input, with `note --stdin` and
+`section <version> --stdin`. The helper writes `NOTE_EDITMSG` and
+`RELEASE_EDITMSG` itself, so Claude Code no longer refuses the write as a
+sensitive file under `.git`, and both skills reach the changelog without a
+prompt.
+
 ## 0.8.0 - 2026-11-23
 
 ### Added
