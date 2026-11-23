@@ -102,8 +102,19 @@ recognises it. "Removing a worktree deleted ignored files, at exit 0 and
 without a word" tells a reader whether it happened to them. "Fixed ignored
 file handling" does not.
 
-Sentences, not fragments. One idea per entry. No bullet that only points back
-at the ones before it.
+One idea per entry. No bullet that only points back at the ones before it.
+
+## The wording
+
+technical-writer's `write-technical-prose` skill words what this plugin
+drafts: the note `release:write` writes, and each entry `release:prepare`
+writes from a row whose `source` is `diff`. Load it once, where the entry is
+written, and never in pass 2's subagents. Apply its shared rules and its
+`self_edit` rule to those entries. A declared note keeps its author's words.
+
+Where that skill and this file disagree, this file wins. An entry needs no
+lead-in sentence before its list and no WARNING or CAUTION label: a breaking
+change goes first and says what to do instead.
 
 ## Categories
 
