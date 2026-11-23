@@ -1,5 +1,5 @@
 ---
-name: setup
+name: init-repo
 description: Declare how this repository publishes a release, by tag or by dispatch, and make its publish workflow match
 disable-model-invocation: true
 argument-hint: "[tag | dispatch | both]"
@@ -58,7 +58,12 @@ repeats them.
      triggers are listed it creates the tag with that token, so the tag does not
      start this workflow a second time.
 7. Show the diff, commit it, push the branch and open a pull request. Do not
-   merge it.
+   merge it. Write the title and the body with technical-writer's
+   `write-pr-description` skill. Then read the bundled
+   [write skill](../write/SKILL.md) and run it as
+   `/release:write --none --pr <number>`. A person running the software
+   cannot observe a change to a workflow or to `.releasetools.yaml`, so the
+   block says `NONE`.
 
 An agent does this rather than a GitHub Action because a workflow's own token
 cannot write `.github/workflows/`, and which trigger fits is the maintainer's

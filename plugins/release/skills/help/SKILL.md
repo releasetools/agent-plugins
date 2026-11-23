@@ -14,7 +14,7 @@ each entry the way their client invokes it: `/release:release` in Claude Code,
   green, and publication. Asking for a release in plain words, such as "cut a
   release, version 1.2.3", runs the same steps. The version is bare, `1.2.3`;
   `v1.2.3` is its tag
-- `/release:setup [tag | dispatch | both]` - declare what starts a release's
+- `/release:init-repo [tag | dispatch | both]` - declare what starts a release's
   publish workflow, pushing the tag or dispatching the workflow, and change
   that workflow to match, as a pull request. It runs only when called by name
 - `/release:preflight [user | project]` - add the Claude Code permission

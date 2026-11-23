@@ -37,12 +37,12 @@ Use `/release:<skill>` in Claude Code and `$release:<skill>` in Codex.
 | `write`     | `[--pr <number>] [--base <ref>] [--path <dir>] [--none]` | Write this change's note into the pull request and changelog |
 | `prepare`   | `<version> [--path <dir>] [--at <rev>]`                  | Collate a release's changelog entry                          |
 | `release`   | `<version> [--path <dir>]`                               | Run a release through publication                            |
-| `setup`     | `[tag \| dispatch \| both]`                              | Configure the publish workflow through a pull request        |
+| `init-repo` | `[tag \| dispatch \| both]`                              | Configure the publish workflow through a pull request        |
 | `preflight` | `[user \| project]`                                      | Configure Claude Code permissions for publishing             |
 | `help`      |                                                          | List the skills and their requirements                       |
 
 Asking for a release in plain words, such as "cut a release, version 1.2.3",
-runs `release`. `setup` and `preflight` run only when called by name.
+runs `release`. `init-repo` and `preflight` run only when called by name.
 `write` and `prepare` can run independently; neither publishes a release.
 Both read the [shared release-note rules](references/release-notes.md) before
 drafting. The rules are an internal reference with no slash command.
@@ -113,7 +113,7 @@ release:
 
 Under `tag` the plugin pushes the signed tag and the push starts `publish`.
 Under `dispatch` it runs `publish` with the version and the release commit, and
-the workflow creates the tag. `/release:setup` declares which, and changes the
+the workflow creates the tag. `/release:init-repo` declares which, and changes the
 publish workflow to match.
 
 The release tag is `v<version>`, as defined by the conventions. There is no
