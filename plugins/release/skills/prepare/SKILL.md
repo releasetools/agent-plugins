@@ -121,12 +121,17 @@ skill and word each entry drafted from a `diff` row with it, as
 [the wording](../../references/release-notes.md#the-wording) says. Rows from
 a declared note stay as written.
 
-Write the body to the `scratchFile` path from pass 1, show it to the user,
-then:
+Show the body to the user, then pass it on standard input:
 
 ```bash
-node "<helper>" section <version>
+node "<helper>" section <version> --stdin <<'EOF'
+<the body>
+EOF
 ```
+
+`--stdin` writes the body to the `scratchFile` path from pass 1, which is
+under `.git`, where Claude Code refuses a write of its own. Never write that
+file directly.
 
 That puts it in `CHANGELOG.md` under `## <version> - <date>`, above every
 older release and below the preamble, and leaves the same bytes in the
